@@ -1,0 +1,213 @@
+.child-profile-page {
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: 10px 0 42px;
+  color: #183b3a;
+}
+
+.child-profile-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.child-profile-heading p,
+.child-profile-sheet-heading p {
+  margin: 0 0 8px;
+  color: #956735;
+  font-family: Georgia, serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.child-profile-heading h1 {
+  margin: 0;
+  font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif;
+  font-size: clamp(2.35rem, 6vw, 4.2rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.child-profile-heading h1 em {
+  color: #0f766e;
+  font-style: normal;
+}
+
+.child-profile-heading > span {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgb(15 118 110 / 24%);
+  border-radius: 999px;
+  background: rgb(216 235 228 / 55%);
+  color: #41645d;
+  font-size: 0.875rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.child-profile-heading svg,
+.child-profile-boundary svg {
+  width: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.child-profile-hero {
+  position: relative;
+  display: grid;
+  min-height: 210px;
+  grid-template-columns: 164px minmax(0, 1fr);
+  align-items: center;
+  gap: 30px;
+  padding: 26px 34px;
+  overflow: hidden;
+  border: 1px solid rgb(24 59 58 / 15%);
+  border-radius: 34px 34px 56px 34px;
+  background:
+    radial-gradient(circle at 87% 15%, rgb(214 164 71 / 22%), transparent 170px),
+    linear-gradient(135deg, #d8ebe4 0%, #e8efe5 58%, #f4ead4 100%);
+  box-shadow: 0 22px 60px rgb(45 66 55 / 12%);
+}
+
+.child-profile-hero::after {
+  position: absolute;
+  right: -62px;
+  bottom: -118px;
+  width: 260px;
+  height: 220px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  border-radius: 48% 52% 42% 58%;
+  content: "";
+  transform: rotate(-12deg);
+}
+
+.child-profile-avatar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 150px;
+  height: 150px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 62%);
+  border-radius: 42px 42px 68px 42px;
+  background: rgb(255 253 247 / 64%);
+  box-shadow: inset 0 0 0 8px rgb(255 253 247 / 28%);
+  transform: rotate(-2deg);
+}
+
+.child-profile-avatar svg { width: 154px; height: 154px; }
+
+.child-profile-hero-copy { position: relative; z-index: 1; }
+.child-profile-hero-copy > p { display: flex; align-items: center; gap: 8px; margin: 0 0 9px; color: #42655d; font-size: 0.875rem; font-weight: 900; letter-spacing: 0.1em; }
+.child-profile-hero-copy > p > span { width: 7px; height: 7px; border-radius: 50%; background: #0f766e; box-shadow: 0 0 0 4px rgb(15 118 110 / 12%); }
+.child-profile-hero-copy h2 { margin: 0; font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: clamp(2.1rem, 5vw, 3.4rem); line-height: 1.1; }
+.child-profile-hero-copy h2 small { margin: 0 0.32em; color: #627873; font-size: 0.5em; font-weight: 400; }
+.child-profile-hero-copy > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 13px; color: #536b68; font-size: 0.95rem; line-height: 1.6; }
+.child-profile-hero-copy i { width: 4px; height: 4px; border-radius: 50%; background: #9d6d17; }
+.child-profile-index { position: absolute; z-index: 1; top: 20px; right: 27px; color: rgb(24 59 58 / 28%); font-family: Georgia, serif; font-size: 0.72rem; letter-spacing: 0.18em; }
+
+.child-profile-sheet {
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px solid rgb(24 59 58 / 14%);
+  border-radius: 26px;
+  background: rgb(255 253 247 / 84%);
+  box-shadow: 0 14px 42px rgb(52 67 54 / 7%);
+}
+
+.child-profile-sheet-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 1px solid rgb(24 59 58 / 14%); }
+.child-profile-sheet-heading h2 { margin: 0; font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: clamp(1.65rem, 4vw, 2.25rem); }
+.child-profile-sheet-heading > span { color: #6c7e79; font-size: 0.875rem; font-weight: 700; }
+
+.child-profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.child-profile-grid > div { min-width: 0; padding: 17px 18px; border: 1px solid rgb(24 59 58 / 12%); border-radius: 18px; background: #f8f4e9; }
+.child-profile-grid dt { display: flex; align-items: center; gap: 9px; color: #667873; font-size: 0.875rem; font-weight: 800; }
+.child-profile-grid dt > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 11px; background: #d8ebe4; color: #0a5c56; }
+.child-profile-grid dt svg { width: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.child-profile-grid dd { margin: 13px 0 0; color: #183b3a; font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: 1.4rem; font-weight: 700; }
+.child-profile-wide { grid-column: 1 / -1; }
+.child-profile-tags { display: flex; flex-wrap: wrap; gap: 8px; font-family: inherit !important; }
+.child-profile-tags span { padding: 7px 13px; border: 1px solid rgb(15 118 110 / 21%); border-radius: 999px; background: #e7f0eb; color: #0a5c56; font-size: 0.9rem; font-weight: 800; }
+.child-profile-companion-row dd { display: grid; gap: 4px; font-family: inherit; }
+.child-profile-companion-row dd strong { font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: 1.35rem; }
+.child-profile-companion-row dd small { color: #60726e; font-size: 0.88rem; font-weight: 400; line-height: 1.65; }
+
+.child-profile-knowledge {
+  display: grid;
+  width: 100%;
+  min-height: 96px;
+  grid-template-columns: 52px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgb(15 118 110 / 22%);
+  border-radius: 8px 24px 8px 24px;
+  background: linear-gradient(115deg, #dcece6, #f1ead7);
+  color: #183b3a;
+  text-align: left;
+  box-shadow: 0 12px 34px rgb(52 67 54 / 8%);
+}
+.child-profile-knowledge > span:first-child { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 18px 6px 18px 6px; background: rgb(255 253 247 / 70%); color: #0f766e; }
+.child-profile-knowledge > span:nth-child(2) { display: grid; gap: 2px; }
+.child-profile-knowledge small { color: #956735; font-family: Georgia, serif; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.11em; }
+.child-profile-knowledge strong { font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: 1.35rem; }
+.child-profile-knowledge em { color: #60726e; font-size: 0.83rem; font-style: normal; line-height: 1.5; }
+.child-profile-knowledge svg { width: 24px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.child-profile-knowledge > svg { color: #0f766e; }
+.child-profile-knowledge:hover { border-color: rgb(15 118 110 / 45%); }
+
+.child-profile-trusted { border-color: rgb(214 164 71 / 34%); background: linear-gradient(115deg, #f3e6c8, #fbf4e2); }
+.child-profile-trusted > span:first-child { color: #93652a; }
+.child-profile-trusted > svg { color: #93652a; }
+.child-profile-trusted:hover { border-color: rgb(147 101 42 / 48%); }
+
+.child-profile-adult-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px 24px; margin-top: 18px; padding: 19px 20px; border: 1px solid rgb(24 59 58 / 18%); background: #183b3a; color: #f8f3e7; }
+.child-profile-adult-entry > div { display: grid; gap: 3px; }
+.child-profile-adult-entry small { color: #91bdb4; font-family: Georgia, serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; }
+.child-profile-adult-entry strong { font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: 1.35rem; }
+.child-profile-adult-entry p { margin: 0; color: #c8d8d3; font-size: 0.8rem; line-height: 1.55; }
+.child-profile-adult-entry button { min-height: 44px; padding: 9px 16px; border: 1px solid rgb(255 253 247 / 48%); background: transparent; color: #fffdf7; font-weight: 800; }
+.child-profile-adult-entry button:hover:not(:disabled) { background: #fffdf7; color: #183b3a; }
+.child-profile-adult-entry button:disabled { opacity: 0.65; cursor: wait; }
+.child-profile-adult-entry > span { grid-column: 1 / -1; color: #efb5a8; font-size: 0.78rem; }
+
+.child-profile-boundary { display: flex; align-items: flex-start; gap: 13px; margin-top: 18px; padding: 16px 18px; border-left: 4px solid #78a66c; background: rgb(232 238 226 / 76%); color: #526860; }
+.child-profile-boundary p { margin: 0; font-size: 0.875rem; line-height: 1.7; }
+.child-profile-boundary strong { display: block; color: #345345; }
+.child-profile-boundary svg { flex: 0 0 auto; margin-top: 2px; color: #416d3a; }
+
+@media (max-width: 620px) {
+  .child-profile-page { padding-top: 0; }
+  .child-profile-heading { display: grid; align-items: start; gap: 16px; margin-bottom: 22px; }
+  .child-profile-heading > span { width: fit-content; }
+  .child-profile-hero { min-height: 0; grid-template-columns: 104px minmax(0, 1fr); gap: 16px; padding: 20px 18px; border-radius: 26px 26px 40px 26px; }
+  .child-profile-avatar { width: 98px; height: 98px; border-radius: 28px 28px 42px 28px; }
+  .child-profile-avatar svg { width: 105px; height: 105px; }
+  .child-profile-hero-copy h2 { font-size: clamp(1.7rem, 8vw, 2.25rem); }
+  .child-profile-hero-copy > div { gap: 7px; margin-top: 8px; font-size: 0.82rem; }
+  .child-profile-index { display: none; }
+  .child-profile-sheet { padding: 18px 14px; border-radius: 22px; }
+  .child-profile-sheet-heading { align-items: start; }
+  .child-profile-grid { grid-template-columns: 1fr; }
+  .child-profile-wide { grid-column: auto; }
+  .child-profile-grid > div { padding: 15px; }
+  .child-profile-knowledge { grid-template-columns: 46px minmax(0, 1fr) 22px; gap: 12px; padding: 16px; }
+  .child-profile-knowledge > span:first-child { width: 46px; height: 46px; }
+  .child-profile-adult-entry { grid-template-columns: 1fr; }
+  .child-profile-adult-entry button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .child-profile-avatar { transform: none; }
+}

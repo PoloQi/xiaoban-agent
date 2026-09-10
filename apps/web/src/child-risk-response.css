@@ -1,0 +1,169 @@
+.risk-response-shell {
+  --risk-paper: #f5f0e4;
+  --risk-card: #fffdf7;
+  --risk-ink: #382b29;
+  --risk-muted: #765d58;
+  --risk-red: #a83232;
+  --risk-red-deep: #762222;
+  --risk-red-wash: #f7e5e1;
+  width: min(100%, 820px);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 22px clamp(16px, 5vw, 44px) 44px;
+  color: var(--risk-ink);
+  background:
+    radial-gradient(circle at 86% 4%, rgb(168 50 50 / 8%), transparent 27%),
+    linear-gradient(rgb(245 240 228 / 96%), rgb(245 240 228 / 96%));
+}
+
+.risk-response-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgb(118 34 34 / 18%);
+}
+
+.risk-response-status > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--risk-red);
+}
+
+.risk-response-status svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.risk-response-status p { margin: 0; }
+.risk-response-status strong,
+.risk-response-status small { display: block; }
+.risk-response-status strong { font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: 1.1rem; }
+.risk-response-status small { margin-top: 2px; color: var(--risk-muted); font-size: 0.875rem; }
+
+.risk-response-hero {
+  margin-top: 22px;
+  padding: clamp(22px, 5vw, 38px);
+  border: 1px solid rgb(168 50 50 / 22%);
+  border-radius: 25px 25px 25px 7px;
+  background: rgb(255 253 247 / 90%);
+  box-shadow: 0 16px 36px rgb(83 48 42 / 8%);
+}
+
+.risk-response-alert {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border-radius: 20px 20px 20px 7px;
+  color: #fff;
+  background: var(--risk-red);
+  box-shadow: 0 5px 0 var(--risk-red-deep);
+}
+
+.risk-response-alert svg { width: 31px; height: 31px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.risk-response-kicker { margin: 22px 0 6px; color: var(--risk-red); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.14em; }
+.risk-response-hero h1 { margin: 0; color: var(--risk-red-deep); font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: clamp(2rem, 7vw, 3.7rem); line-height: 1.08; }
+.risk-response-lead { margin: 13px 0 0; color: var(--risk-muted); font-size: 0.94rem; line-height: 1.75; }
+
+.risk-response-steps {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: risk-step;
+}
+
+.risk-response-steps li {
+  position: relative;
+  min-height: 34px;
+  padding: 7px 0 7px 46px;
+  line-height: 1.65;
+  counter-increment: risk-step;
+}
+
+.risk-response-steps li::before {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgb(168 50 50 / 24%);
+  border-radius: 50%;
+  color: var(--risk-red-deep);
+  background: var(--risk-red-wash);
+  font-family: Georgia, serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  content: counter(risk-step, decimal-leading-zero);
+}
+
+.risk-response-actions { margin-top: 28px; }
+.risk-response-section-heading { margin-bottom: 13px; }
+.risk-response-section-heading p { margin: 0 0 4px; color: var(--risk-red); font-family: Georgia, serif; font-size: 0.875rem; font-weight: 800; letter-spacing: 0.16em; }
+.risk-response-section-heading h2 { margin: 0; font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif; font-size: clamp(1.55rem, 5vw, 2.15rem); }
+
+.risk-response-action {
+  display: grid;
+  width: 100%;
+  min-height: 76px;
+  grid-template-columns: 46px 1fr 21px;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid rgb(168 50 50 / 18%);
+  border-radius: 18px 18px 18px 6px;
+  color: var(--risk-ink);
+  background: rgb(255 253 247 / 88%);
+  text-align: left;
+  box-shadow: 0 8px 20px rgb(83 48 42 / 5%);
+}
+
+.risk-response-action:hover { border-color: rgb(168 50 50 / 38%); background: #fffdf7; }
+.risk-response-action:focus-visible { outline: 3px solid rgb(168 50 50 / 25%); outline-offset: 2px; }
+.risk-response-action > svg { width: 20px; height: 20px; color: var(--risk-red); fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.risk-response-action-icon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 14px 14px 14px 5px; color: var(--risk-red); background: var(--risk-red-wash); }
+.risk-response-action-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.risk-response-action strong,
+.risk-response-action small { display: block; }
+.risk-response-action strong { font-size: 0.95rem; line-height: 1.4; }
+.risk-response-action small { margin-top: 4px; color: var(--risk-muted); font-size: 0.875rem; line-height: 1.45; }
+
+.risk-response-detail {
+  margin: 8px 4px 14px 58px;
+  padding: 13px 15px;
+  border-left: 3px solid var(--risk-red);
+  border-radius: 0 12px 12px 0;
+  color: var(--risk-muted);
+  background: rgb(255 253 247 / 64%);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.risk-response-boundary {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 22px;
+  padding: 14px 15px;
+  border: 1px dashed rgb(157 109 23 / 38%);
+  border-radius: 14px;
+  color: #70551f;
+  background: #fbf0cf;
+}
+
+.risk-response-boundary svg { flex: 0 0 auto; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.risk-response-boundary p { margin: 0; font-size: 0.875rem; line-height: 1.65; }
+
+@media (max-width: 420px) {
+  .risk-response-shell { padding-top: 15px; }
+  .risk-response-hero { margin-top: 16px; padding: 20px 18px; }
+  .risk-response-alert { width: 54px; height: 54px; }
+  .risk-response-action { grid-template-columns: 42px 1fr 18px; gap: 9px; padding: 10px; }
+  .risk-response-action-icon { width: 40px; height: 40px; }
+  .risk-response-detail { margin-left: 48px; }
+}

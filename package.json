@@ -1,0 +1,30 @@
+{
+  "name": "xiaoban",
+  "version": "0.1.0",
+  "private": true,
+  "description": "小伴 AI 陪伴智能体受控试点产品",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm --filter @xiaoban/contracts build && pnpm -r --if-present typecheck",
+    "test": "pnpm --filter @xiaoban/contracts build && pnpm -r --if-present test",
+    "test:integration": "pnpm --filter @xiaoban/contracts build && pnpm --filter @xiaoban/api test:integration",
+    "check": "pnpm check:secrets && pnpm typecheck && pnpm test && pnpm build",
+    "check:secrets": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-secrets.ps1",
+    "dev": "pnpm --filter @xiaoban/contracts build && pnpm --parallel --filter @xiaoban/api --filter @xiaoban/web dev",
+    "db:install": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/mysql/local-mysql.ps1 -Action Install",
+    "db:start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/mysql/local-mysql.ps1 -Action Start",
+    "db:stop": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/mysql/local-mysql.ps1 -Action Stop",
+    "db:verify": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/mysql/local-mysql.ps1 -Action Verify",
+    "db:migrate": "pnpm --filter @xiaoban/api db:migrate:local",
+    "db:migrate:test": "pnpm --filter @xiaoban/api db:migrate:test",
+    "db:rollback:test": "pnpm --filter @xiaoban/api db:rollback:test",
+    "db:seed:dev": "pnpm --filter @xiaoban/api db:seed:dev",
+    "generation:on": "pnpm --filter @xiaoban/api generation:on",
+    "generation:off": "pnpm --filter @xiaoban/api generation:off"
+  }
+}

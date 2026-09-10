@@ -1,0 +1,25 @@
+node_modules/
+dist/
+coverage/
+.local/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+
+# pnpm 本地缓存仓库
+.pnpm-store/
+
+# 编辑器 / Agent 本地数据
+.workbuddy/
+.claude/settings.local.json
+
+# TypeScript 增量编译缓存
+*.tsbuildinfo
+
+# 大体积参考资料（保留在本地，不进入版本库）
+2026调研报告.docx
+
+# 脚本运行临时文件
+_tmp_*

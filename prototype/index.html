@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f0e4" />
+    <meta
+      name="description"
+      content="小伴——面向留守儿童的安全、适龄AI成长伙伴高保真原型。"
+    />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css?v=6" />
+    <title>小伴｜AI成长伙伴原型</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#app-main">跳到主要内容</a>
+
+    <div class="prototype-stage">
+      <aside class="story-rail" aria-label="原型演示说明">
+        <div class="story-rail__eyebrow">HIGH-FIDELITY PROTOTYPE</div>
+        <h1>让屏幕把孩子<br />带回真实生活。</h1>
+        <p>
+          “小伴”不是用另一个无限信息流替代短视频，而是在儿童无聊、孤单或遇到风险时，给出一条通往现实行动与真人帮助的路。
+        </p>
+
+        <div class="story-rail__paths">
+          <button class="story-path" type="button" data-demo-route="bored">
+            <span class="story-path__number">01</span>
+            <span><b>从无聊到行动</b><small>想刷视频 → 选择现实活动</small></span>
+          </button>
+          <button class="story-path" type="button" data-demo-route="lonely">
+            <span class="story-path__number">02</span>
+            <span><b>从想念到连接</b><small>表达情绪 → 联系可信任的人</small></span>
+          </button>
+          <button class="story-path" type="button" data-demo-route="risk">
+            <span class="story-path__number">03</span>
+            <span><b>从风险到求助</b><small>网友索要地址 → 成人承接</small></span>
+          </button>
+        </div>
+
+        <div class="story-rail__note">
+          <span class="paper-pin" aria-hidden="true"></span>
+          <strong>演示说明</strong>
+          <p>所有账号、对话与通知均为虚构数据。原型不会真实发送消息或收集个人信息。</p>
+        </div>
+      </aside>
+
+      <div class="device-wrap">
+        <div class="device-speaker" aria-hidden="true"></div>
+        <div id="app" class="app-shell" role="application" aria-label="小伴AI成长伙伴原型">
+          <main id="app-main" class="app-main" tabindex="-1"></main>
+          <div id="app-overlay" class="app-overlay" aria-live="off"></div>
+          <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript">此原型需要启用JavaScript才能运行。</div>
+    </noscript>
+
+    <script type="module" src="./app.js?v=6"></script>
+  </body>
+</html>

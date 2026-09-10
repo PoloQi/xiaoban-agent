@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f0e4" />
+    <meta
+      name="description"
+      content="小伴——从陪伴对话走向现实行动的 AI 成长伙伴。"
+    />
+    <title>小伴 · AI成长伙伴</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      if (import.meta.env.DEV && "serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+        if ("caches" in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+        }
+      }
+        await import("/src/main.tsx?v=20260831-onboarding");
+    </script>
+  </body>
+</html>

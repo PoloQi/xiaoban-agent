@@ -1,0 +1,45 @@
+{
+  "name": "@xiaoban/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file=../../.local/mysql-secrets/database.env --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx --watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --exclude src/**/*.integration.test.ts",
+    "test:integration": "node --env-file=../../.local/mysql-secrets/database.env ./node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts",
+    "ai:smoke:deepseek": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/ai/smoke-deepseek.ts",
+    "ai:smoke:orchestrator": "node --env-file=../../.local/mysql-secrets/database.env --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/ai/smoke-orchestrator.ts",
+    "risk:evaluate:seed": "node --import tsx src/safety/run-risk-evaluation.ts",
+    "risk:validate:release": "node --import tsx src/safety/validate-release-safety-evaluation.ts",
+    "risk:evaluate:release:preflight": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=preflight",
+    "risk:evaluate:release:diagnostic": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=diagnostic --case-id=release-eval-ordinary-051",
+    "risk:evaluate:release:diagnostic-input-boundary": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=diagnostic-input-boundary",
+    "risk:evaluate:release:diagnostic-candidate": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=diagnostic-candidate",
+    "risk:evaluate:release:diagnostic-l3-candidate": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=diagnostic-l3-candidate",
+    "risk:evaluate:release:diagnostic-l1-candidate": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=diagnostic-l1-candidate",
+    "risk:evaluate:release": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/run-release-safety-evaluation.ts --mode=full",
+    "risk:smoke:classifier": "node --env-file-if-exists=../../.local/model-secrets/deepseek.env --import tsx src/safety/smoke-risk-classifier.ts",
+    "db:migrate:local": "node --env-file=../../.local/mysql-secrets/database.env --import tsx src/database/migrate.ts",
+    "db:migrate:test": "node --env-file=../../.local/mysql-secrets/database.env --import tsx src/database/migrate.ts --target=test",
+    "db:rollback:test": "node --env-file=../../.local/mysql-secrets/database.env --import tsx src/database/migrate.ts --target=test --down",
+    "db:seed:dev": "node --env-file=../../.local/mysql-secrets/database.env --import tsx src/database/seed-dev.ts",
+    "generation:on": "node --env-file=../../.local/mysql-secrets/database.env --import tsx src/safety/generation-control-cli.ts on",
+    "generation:off": "node --env-file=../../.local/mysql-secrets/database.env --import tsx src/safety/generation-control-cli.ts off"
+  },
+  "dependencies": {
+    "@xiaoban/contracts": "workspace:*",
+    "fastify": "^5.12.0",
+    "kysely": "^0.29.5",
+    "mysql2": "^3.23.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
