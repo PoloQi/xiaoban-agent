@@ -84,6 +84,34 @@
 
 .trusted-back { display: inline-flex; min-height: 48px; align-items: center; gap: 8px; margin: 26px auto 0; padding: 0 22px; border: 1px solid rgb(24 59 58 / 22%); border-radius: 999px; background: transparent; color: var(--trusted-deep); font-size: 0.95rem; font-weight: 800; }
 
+.trusted-confirm {
+  display: grid;
+  width: min(100%, 920px);
+  margin: 22px auto 0;
+  padding: 14px 18px;
+  grid-template-columns: 46px 1fr;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid rgb(24 59 59 / 30%);
+  border-radius: 18px 18px 18px 6px;
+  background: rgb(255 253 247 / 94%);
+  text-align: left;
+  cursor: pointer;
+  color: var(--trusted-deep);
+  box-shadow: 0 10px 22px rgb(24 59 59 / 10%);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.trusted-confirm:hover { background: #fffdf7; border-color: rgb(24 59 59 / 50%); }
+.trusted-confirm:focus-visible { outline: 3px solid rgb(24 59 59 / 30%); outline-offset: 2px; }
+.trusted-confirm > .trusted-icon {
+  width: 26px; height: 26px; color: var(--trusted-deep);
+  flex: none;
+}
+.trusted-confirm strong,
+.trusted-confirm small { display: block; }
+.trusted-confirm strong { font-size: 1rem; }
+.trusted-confirm small { margin-top: 4px; color: #526963; font-size: 0.85rem; line-height: 1.5; }
+
 @media (max-width: 560px) {
   .trusted-topbar { grid-template-columns: auto 1fr; }
   .trusted-topbar > div { justify-items: start; }

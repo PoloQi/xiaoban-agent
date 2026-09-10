@@ -14,6 +14,7 @@ interface ChildTrustedAdultsProps {
   token: string;
   onBack: () => void;
   backLabel: string;
+  onConfirmToldAdult?: () => void;
 }
 
 function TrustedIcon({ name }: { name: "back" | "people" | "talk" | "copy" | "check" | "shield" }) {
@@ -61,7 +62,7 @@ function AdultCard({ adult }: { adult: ChildTrustedAdult }) {
   );
 }
 
-export function ChildTrustedAdults({ token, onBack, backLabel }: ChildTrustedAdultsProps) {
+export function ChildTrustedAdults({ token, onBack, backLabel, onConfirmToldAdult }: ChildTrustedAdultsProps) {
   const [data, setData] = useState<ChildTrustedAdultsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
@@ -152,6 +153,18 @@ export function ChildTrustedAdults({ token, onBack, backLabel }: ChildTrustedAdu
         <TrustedIcon name="shield" />
         <p><strong>这一版只帮你找到人。</strong>联系按钮不会真的拨号、发短信或发消息，小伴也不会替你通知任何人。请自己去找对方当面说，或请老师陪你联系家人。</p>
       </aside>
+
+      {onConfirmToldAdult !== undefined && (
+        <button
+          className="trusted-confirm"
+          type="button"
+          onClick={onConfirmToldAdult}
+          aria-label="我已告诉身边的大人，进入完成页"
+        >
+          <TrustedIcon name="check" />
+          <span><strong>我已告诉他/她</strong><small>你已经迈出了求助的一步</small></span>
+        </button>
+      )}
 
       <button className="trusted-back" type="button" onClick={onBack}><TrustedIcon name="back" />{backLabel}</button>
     </section>

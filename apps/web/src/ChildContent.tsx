@@ -21,6 +21,7 @@ import { ChildHome } from "./ChildHome";
 import { ChildKnowledgeCenter } from "./ChildKnowledgeCenter";
 import { ChildProfile } from "./ChildProfile";
 import { ChildRiskResponse } from "./ChildRiskResponse";
+import { ChildRiskSent } from "./ChildRiskSent";
 import { ChildTrustedAdults } from "./ChildTrustedAdults";
 import { recordChildGrowthAttempt } from "./growth-plan";
 import type { CompletedChildProfile } from "./profile";
@@ -87,6 +88,10 @@ function locationLabel(value: "indoor" | "outdoor" | "either") {
   return value === "indoor" ? "室内" : value === "outdoor" ? "户外" : "室内或户外";
 }
 
+function movementLabel(value: "move" | "quiet") {
+  return value === "move" ? "想动一动" : "安静做点事";
+}
+
 function supervisionLabel(value: "none" | "recommended" | "required") {
   return value === "required" ? "需要成人陪同" : value === "recommended" ? "建议成人在旁" : "可以自己完成";
 }
@@ -116,7 +121,7 @@ function ContentCard({ item, onOpen }: { item: ChildContentSummary; onOpen: () =
         <strong>{item.title}</strong>
         <span className="field-card-summary">{item.summary}</span>
         <span className="field-card-meta">
-          {item.type === "activity" ? `${item.durationMinutes}分钟 · ${locationLabel(item.location)}` : "短短几段 · 慢慢读"}
+          {item.type === "activity" ? `${movementLabel(item.movement)} · ${item.durationMinutes}分钟 · ${locationLabel(item.location)}` : "短短几段 · 慢慢读"}
         </span>
       </span>
       <span className="field-card-arrow"><Icon name="arrow" /></span>
@@ -131,6 +136,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
   const [chatMode, setChatMode] = useState<"bored" | "help" | undefined>();
   const [chatKey, setChatKey] = useState(0);
   const [filter, setFilter] = useState<ContentFilter>("all");
+  const [movementFilter, setMovementFilter] = useState<"all" | "move" | "quiet">("all");
   const [items, setItems] = useState<ChildContentSummary[]>([]);
   const [detail, setDetail] = useState<ChildContentDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,11 +152,20 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
   const [timerRunning, setTimerRunning] = useState(false);
   const [encouragement, setEncouragement] = useState("");
   const [safetyResponse, setSafetyResponse] = useState<Extract<ChildChatResponse, { route: "fixed_safety" }> | null>(null);
+  const [riskSentOpen, setRiskSentOpen] = useState(false);
   const [knowledgeOrigin, setKnowledgeOrigin] = useState<"home" | "profile" | null>(null);
-  const [trustedOrigin, setTrustedOrigin] = useState<"home" | "profile" | null>(null);
-  const visibleItems = filter === "all"
-    ? items
-    : items.filter((item) => item.type === filter);
+  const [trustedOrigin, setTrustedOrigin] = useState<"home" | "profile" | "risk" | null>(null);
+  const visibleItems = items
+    .filter((item) => filter === "all" || item.type === filter)
+    .filter((item) => {
+      if (movementFilter === "all") return true;
+      return item.type === "activity" && item.movement === movementFilter;
+    });
+
+  function selectFilter(value: ContentFilter) {
+    setFilter(value);
+    setMovementFilter("all");
+  }
 
   useEffect(() => {
     if (!timerRunning || activityStage !== "timer") return;
@@ -294,6 +309,15 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openActivitiesFromChat(movement: "move" | "quiet") {
+    setDetail(null);
+    setFilter("activity");
+    setMovementFilter(movement);
+    setChatView("home");
+    setTab("content");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function openHome() {
     setDetail(null);
     setKnowledgeOrigin(null);
@@ -319,7 +343,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function openTrusted(origin: "home" | "profile") {
+  function openTrusted(origin: "home" | "profile" | "risk") {
     setDetail(null);
     setTrustedOrigin(origin);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -329,11 +353,40 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
     const origin = trustedOrigin;
     setTrustedOrigin(null);
     if (origin === "profile") setTab("profile");
-    else {
+    else if (origin === "home") {
       setChatView("home");
       setTab("chat");
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  if (riskSentOpen) {
+    return (
+      <ChildRiskSent
+        onBackHome={() => {
+          setRiskSentOpen(false);
+          setTrustedOrigin(null);
+          setSafetyResponse(null);
+          setChatView("home");
+          setTab("chat");
+          window.scrollTo({ top: 0 });
+        }}
+        {...(onOpenAdult === undefined ? {} : {
+          onOpenAdultPreview: () => void onOpenAdult(),
+        })}
+      />
+    );
+  }
+
+  if (trustedOrigin !== null) {
+    return (
+      <ChildTrustedAdults
+        token={token}
+        onBack={closeTrusted}
+        backLabel={trustedOrigin === "profile" ? "返回我的" : trustedOrigin === "risk" ? "返回安全指引" : "返回儿童首页"}
+        {...(trustedOrigin === "risk" ? { onConfirmToldAdult: () => setRiskSentOpen(true) } : {})}
+      />
+    );
   }
 
   if (safetyResponse !== null) {
@@ -346,16 +399,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
           setTab("chat");
           window.scrollTo({ top: 0 });
         }}
-      />
-    );
-  }
-
-  if (trustedOrigin !== null) {
-    return (
-      <ChildTrustedAdults
-        token={token}
-        onBack={closeTrusted}
-        backLabel={trustedOrigin === "profile" ? "返回我的" : "返回儿童首页"}
+        onOpenTrusted={() => openTrusted("risk")}
       />
     );
   }
@@ -464,6 +508,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
           <div className="detail-facts">
             {detail.type === "activity" ? (
               <>
+                <span><Icon name="leaf" />{movementLabel(detail.movement)}</span>
                 <span><Icon name="clock" />{detail.durationMinutes}分钟</span>
                 <span><Icon name="pin" />{locationLabel(detail.location)}</span>
                 <span><Icon name="person" />{supervisionLabel(detail.adultSupervision)}</span>
@@ -521,9 +566,17 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
             <div className="library-heading"><div><p>EXPLORE</p><h2>今天想看什么？</h2></div><span>{loading ? "正在整理" : error === null ? `${visibleItems.length} 项可看` : "暂时不可用"}</span></div>
             <div className="content-filters" aria-label="内容分类">
               {([ ["all", "都看看"], ["activity", "现实活动"], ["knowledge", "成长知识"] ] as const).map(([value, label]) => (
-                <button key={value} className={filter === value ? "is-active" : ""} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>
+                <button key={value} className={filter === value ? "is-active" : ""} type="button" aria-pressed={filter === value} onClick={() => selectFilter(value)}>{label}</button>
               ))}
             </div>
+
+            {filter === "activity" && (
+              <div className="content-subfilters" aria-label="活动方式">
+                {([ ["all", "都看看"], ["move", "想动一动"], ["quiet", "安静做点事"] ] as const).map(([value, label]) => (
+                  <button key={value} className={movementFilter === value ? "is-active" : ""} type="button" aria-pressed={movementFilter === value} onClick={() => setMovementFilter(value)}>{label}</button>
+                ))}
+              </div>
+            )}
 
             {cachedAt !== null && (
               <div className="content-cache-notice" role="status">
@@ -547,7 +600,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
           onOpenChat={openChat}
           onOpenContent={() => {
             setDetail(null);
-            setFilter("activity");
+            selectFilter("activity");
             setTab("content");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
@@ -568,6 +621,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
           {...(chatMode === undefined ? {} : { initialMode: chatMode })}
           onBack={openHome}
           onSafetyResponse={setSafetyResponse}
+          onOpenActivities={openActivitiesFromChat}
         />
       )}
 
