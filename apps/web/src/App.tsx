@@ -269,6 +269,7 @@ export function App() {
         profile={onboarding.profile}
         token={childToken}
         {...(import.meta.env.DEV ? { onOpenAdult: handleOpenAdult } : {})}
+        onProfileUpdated={(next) => setOnboarding({ ...onboarding, profile: next })}
         onExit={() => {
           clearChildSession();
           setChildToken(null);

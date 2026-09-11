@@ -109,6 +109,10 @@ const publicErrors: Record<
     message: "请求的接口不存在。",
     nextAction: "检查请求地址后重试。",
   },
+  NOT_FOUND: {
+    message: "请求的资源不存在。",
+    nextAction: "返回上一页或刷新后重试。",
+  },
   DEPENDENCY_UNAVAILABLE: {
     message: "服务尚未准备好。",
     nextAction: "请稍后重试。",

@@ -62,6 +62,7 @@ async function createContent(input: {
     summary: input.summary,
     content_body: JSON.stringify(type === "activity"
       ? {
+          movement: "quiet",
           durationMinutes: 10,
           location: "indoor",
           materials: [],

@@ -1,9 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-import type { ChildGrowthPlanResponse } from "@xiaoban/contracts";
+import type { ChildGrowthGoalListResponse, ChildGrowthPlanResponse } from "@xiaoban/contracts";
 
 import { ApiError } from "./api";
-import { loadChildGrowthPlan, recordChildGrowthAttempt } from "./growth-plan";
+import {
+  loadChildGrowthGoals,
+  loadChildGrowthPlan,
+  recordChildGrowthAttempt,
+  updateChildGrowthGoal,
+} from "./growth-plan";
 import "./growth-plan.css";
 
 interface ChildGrowthPlanProps {
@@ -37,6 +42,10 @@ export function ChildGrowthPlan({ token }: ChildGrowthPlanProps) {
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [goalPickerOpen, setGoalPickerOpen] = useState(false);
+  const [goalPicker, setGoalPicker] = useState<ChildGrowthGoalListResponse | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,6 +78,38 @@ export function ChildGrowthPlan({ token }: ChildGrowthPlanProps) {
         : new ApiError("DEPENDENCY_UNAVAILABLE", "这次尝试还没有记下来。", "请稍后重试。"));
     } finally {
       setRecording(false);
+    }
+  }
+
+  async function openGoalPicker() {
+    if (goalPickerOpen) return;
+    setGoalPickerOpen(true);
+    setPickerError(null);
+    try {
+      setGoalPicker(await loadChildGrowthGoals(token));
+    } catch (reason) {
+      setPickerError(reason instanceof ApiError
+        ? reason.message
+        : "暂时拿不到候选目标。");
+      setGoalPickerOpen(false);
+    }
+  }
+
+  async function chooseGoal(goalKey: ChildGrowthGoalListResponse["currentKey"]) {
+    if (switching) return;
+    setSwitching(true);
+    setPickerError(null);
+    try {
+      const next = await updateChildGrowthGoal(token, goalKey);
+      setGoalPicker(next);
+      setPlan(await loadChildGrowthPlan(token));
+      setGoalPickerOpen(false);
+    } catch (reason) {
+      setPickerError(reason instanceof ApiError
+        ? reason.message
+        : "暂时换不了，稍后再试一次。");
+    } finally {
+      setSwitching(false);
     }
   }
 
@@ -126,6 +167,39 @@ export function ChildGrowthPlan({ token }: ChildGrowthPlanProps) {
   }
 
   const progress = Math.min(100, (plan.goal.attemptCount / plan.goal.targetAttempts) * 100);
+
+  if (goalPickerOpen && goalPicker !== null) {
+    return (
+      <section className="growth-page growth-goal-picker">
+        <header className="growth-heading">
+          <button className="growth-back" type="button" onClick={() => setGoalPickerOpen(false)} aria-label="返回成长计划"><GrowthIcon name="arrow" /></button>
+          <div><p>SWITCH THE GOAL</p><h1>选一个本周的小目标</h1><span>候选都是从「我的小计划」里挑出来的，全部可逆。</span></div>
+        </header>
+        {pickerError !== null && <div className="growth-error" role="alert"><strong>{pickerError}</strong></div>}
+        <div className="growth-goal-options">
+          {goalPicker!.goals.map((option) => {
+            const isCurrent = option.key === goalPicker!.currentKey;
+            return (
+              <article key={option.key} className={isCurrent ? "is-current" : ""}>
+                <header><h2>{option.title}</h2>{isCurrent && <span>当前目标</span>}</header>
+                <p>{option.description}</p>
+                <small>替代行动：{option.alternativeAction}</small>
+                <button
+                  type="button"
+                  className="growth-primary-button"
+                  disabled={isCurrent || switching}
+                  onClick={() => void chooseGoal(option.key)}
+                >
+                  {isCurrent ? "当前目标" : switching ? "正在保存…" : "选这个目标"}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="growth-page">
       <header className="growth-heading">
@@ -135,6 +209,15 @@ export function ChildGrowthPlan({ token }: ChildGrowthPlanProps) {
 
       <article className="growth-goal-hero">
         <div className="growth-goal-copy"><p>THIS WEEK</p><h2>{plan.goal.title}</h2><span>替代行动：{plan.goal.alternativeAction}</span></div>
+        <button
+          className="growth-goal-switch"
+          type="button"
+          onClick={() => void openGoalPicker()}
+          aria-label="换一个目标"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 3h5v5" /><path d="M21 3l-7 7" /><path d="M8 21H3v-5" /><path d="M3 21l7-7" /><path d="M3 8V3h5" /><path d="M21 16v5h-5" /></svg>
+          <span>换一个目标</span>
+        </button>
         <div className="growth-week-strip" aria-label="本周尝试记录">
           {plan.days.map((day) => <span key={day.date} className={day.attempted ? "is-done" : ""}><small>周</small><b>{day.label}</b>{day.attempted && <i><GrowthIcon name="check" /></i>}</span>)}
         </div>

@@ -243,3 +243,171 @@ describe("child onboarding APIs", () => {
     expect(errorResponseSchema.parse(forbidden.json()).error.code).toBe("FORBIDDEN");
   });
 });
+
+describe("child profile update API", () => {
+  async function createCompletedChild(ageBand: "9_11" | "12_14" = "9_11") {
+    const { childToken } = await createChild(ageBand);
+    const completion = await app.inject({
+      method: "POST",
+      url: "/api/v1/child/onboarding/completion",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        grade: ageBand === "9_11" ? "grade_5" : "grade_7",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    expect(completion.statusCode).toBe(201);
+    return { childToken };
+  }
+
+  it("updates all four fields and records updated_at", async () => {
+    const { childToken } = await createCompletedChild();
+    const requestId = randomUUID();
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(childToken),
+      payload: {
+        requestId,
+        alias: "小青禾",
+        grade: "grade_6",
+        interests: ["sports", "reading"],
+        companion: "kite",
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = childOnboardingResponseSchema.parse(response.json());
+    expect(body).toMatchObject({
+      status: "completed",
+      profile: {
+        alias: "小青禾",
+        ageBand: "9_11",
+        grade: "grade_6",
+        interests: ["sports", "reading"],
+        companion: "kite",
+      },
+    });
+    expect(body.profile?.updatedAt).toBe(fixedNow.toISOString());
+  });
+
+  it("updates only the grade without rewriting updated_at when alias is unchanged", async () => {
+    const { childToken } = await createCompletedChild();
+    // 第一次 PATCH 改 grade 并写入 updated_at
+    const first = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        alias: "小山雀",
+        grade: "grade_6",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    expect(first.statusCode).toBe(200);
+    expect(childOnboardingResponseSchema.parse(first.json()).profile?.updatedAt)
+      .toBe(fixedNow.toISOString());
+  });
+
+  it("rejects a profile update with an age-incompatible grade", async () => {
+    const { childToken } = await createCompletedChild("9_11");
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        alias: "小山雀",
+        grade: "grade_8",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(errorResponseSchema.parse(response.json()).error.code).toBe("INVALID_REQUEST");
+  });
+
+  it("rejects a profile update that is a replay with a different body", async () => {
+    const { childToken } = await createCompletedChild();
+    const requestId = randomUUID();
+    const first = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(childToken),
+      payload: {
+        requestId,
+        alias: "小山雀",
+        grade: "grade_6",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    expect(first.statusCode).toBe(200);
+
+    const conflict = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(childToken),
+      payload: {
+        requestId,
+        alias: "小山雀",
+        grade: "grade_6",
+        interests: ["sports"],
+        companion: "sprout",
+      },
+    });
+    expect(conflict.statusCode).toBe(409);
+    expect(errorResponseSchema.parse(conflict.json()).error.code).toBe("IDEMPOTENCY_CONFLICT");
+  });
+
+  it("rejects a profile update from a guardian session", async () => {
+    const { childToken, guardianToken } = await createChild();
+    // childToken 必须先完成 onboarding 才能 PATCH
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/child/onboarding/completion",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        grade: "grade_5",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(guardianToken),
+      payload: {
+        requestId: randomUUID(),
+        alias: "小山雀",
+        grade: "grade_5",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(errorResponseSchema.parse(response.json()).error.code).toBe("FORBIDDEN");
+  });
+
+  it("rejects a profile update before the child has completed onboarding", async () => {
+    const { childToken } = await createChild();
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/profile",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        alias: "小山雀",
+        grade: "grade_5",
+        interests: ["drawing"],
+        companion: "sprout",
+      },
+    });
+    expect(response.statusCode).toBe(404);
+    expect(errorResponseSchema.parse(response.json()).error.code).toBe("NOT_FOUND");
+  });
+});

@@ -9,6 +9,7 @@ import {
   type ChildInterest,
   type ChildOnboardingCompletionRequest,
   type ChildOnboardingResponse,
+  type ChildProfileUpdateRequest,
 } from "@xiaoban/contracts";
 
 import type { DatabaseSchema } from "../database/types.js";
@@ -25,6 +26,10 @@ function hashToken(token: string): Buffer {
 }
 
 function hashRequest(request: ChildOnboardingCompletionRequest): string {
+  return createHash("sha256").update(JSON.stringify(request), "utf8").digest("hex");
+}
+
+function hashUpdateRequest(request: ChildProfileUpdateRequest): string {
   return createHash("sha256").update(JSON.stringify(request), "utf8").digest("hex");
 }
 
@@ -111,12 +116,91 @@ export class ChildOnboardingService {
     return this.buildResponse(this.database, principal);
   }
 
+  /**
+   * 「我的 → 修改我的资料」编辑闭环。
+   *
+   * 约束（沿用 onboarding 但补两条差异）：
+   * 1. 必须已存在 child_profiles 行（资料编辑只对已完成的儿童开放）。
+   * 2. grade 必须仍在当前 ageBand 允许的范围内（与 onboarding 一致）。
+   * 3. alias 变化时同步更新 child_accounts.alias；alias 不变则不写 child_accounts（减少锁与审计噪声）。
+   * 4. completion_request_id/request_hash 随每次更新写入（idempotency 与 complete 一致）；
+   *    相同 requestId 二次提交会被识别为重放并要求 body 与首次一致。
+   * 5. updated_at 在每次成功编辑后写入；completed_at 保持首次完成时间不变。
+   */
+  async update(
+    token: string,
+    request: ChildProfileUpdateRequest,
+  ): Promise<ChildOnboardingResponse> {
+    const principal = await this.authenticate(token);
+    if (!gradeMatchesAgeBand(request.grade, principal.ageBand)) {
+      throw new PublicAppError("INVALID_REQUEST", 400);
+    }
+    const requestHash = hashUpdateRequest(request);
+    const now = this.now();
+
+    await this.database.transaction().execute(async (transaction) => {
+      const replayed = await transaction.selectFrom("child_profiles")
+        .select([
+          "child_id as childId",
+          "request_hash as requestHash",
+        ])
+        .where("completion_request_id", "=", request.requestId)
+        .executeTakeFirst();
+      if (replayed !== undefined) {
+        if (
+          replayed.childId !== principal.childId
+          || replayed.requestHash !== requestHash
+        ) {
+          throw new PublicAppError("IDEMPOTENCY_CONFLICT", 409);
+        }
+        return;
+      }
+
+      const existingProfile = await transaction.selectFrom("child_profiles")
+        .select(["child_id as childId"])
+        .where("child_id", "=", principal.childId)
+        .forUpdate()
+        .executeTakeFirst();
+      if (existingProfile === undefined) {
+        throw new PublicAppError("NOT_FOUND", 404);
+      }
+
+      await transaction.updateTable("child_profiles")
+        .set({
+          completion_request_id: request.requestId,
+          request_hash: requestHash,
+          grade: request.grade,
+          interests: JSON.stringify(request.interests),
+          companion: request.companion,
+          updated_at: now,
+        })
+        .where("child_id", "=", existingProfile.childId)
+        .execute();
+
+      if (request.alias !== principal.alias) {
+        await transaction.updateTable("child_accounts")
+          .set({ alias: request.alias, updated_at: now })
+          .where("id", "=", existingProfile.childId)
+          .execute();
+      }
+    });
+
+    const refreshed: ChildPrincipal = { ...principal, alias: request.alias };
+    return this.buildResponse(this.database, refreshed);
+  }
+
   private async buildResponse(
     database: Kysely<DatabaseSchema> | Transaction<DatabaseSchema>,
     principal: ChildPrincipal,
   ): Promise<ChildOnboardingResponse> {
     const profile = await database.selectFrom("child_profiles")
-      .select(["grade", "interests", "companion", "completed_at as completedAt"])
+      .select([
+        "grade",
+        "interests",
+        "companion",
+        "completed_at as completedAt",
+        "updated_at as updatedAt",
+      ])
       .where("child_id", "=", principal.childId)
       .executeTakeFirst();
     if (profile === undefined) {
@@ -136,6 +220,7 @@ export class ChildOnboardingService {
         interests: interestsValue(profile.interests),
         companion: profile.companion,
         completedAt: profile.completedAt.toISOString(),
+        updatedAt: profile.updatedAt === null ? null : profile.updatedAt.toISOString(),
       },
     });
   }

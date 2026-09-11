@@ -48,6 +48,7 @@ export const DEV_CONTENT_SEEDS = [
       title: "五分钟室内观察",
       summary: "放下屏幕，在安全的位置找到三样之前没注意的东西。",
       body: {
+        movement: "quiet",
         durationMinutes: 5,
         location: "indoor",
         materials: [],
@@ -184,6 +185,110 @@ export const DEV_CONTENT_SEEDS = [
       riskTags: ["general_information"],
     },
     reviewId: "d2300000-0000-4000-8000-000000000043",
+  },
+  {
+    item: {
+      id: "d2300000-0000-4000-8000-000000000051",
+      contentType: "activity" as const,
+      slug: "demo-indoor-stretch",
+    },
+    version: {
+      id: "d2300000-0000-4000-8000-000000000052",
+      title: "在屋里伸展",
+      summary: "不用器材，让肩膀、眼睛和脑袋一起休息。",
+      body: {
+        movement: "move",
+        durationMinutes: 10,
+        location: "indoor",
+        materials: [],
+        adultSupervision: "none",
+        steps: [
+          "把手机放在看得见但够不到的地方。",
+          "跟着图示伸展肩膀和手臂。",
+          "慢慢深呼吸三次，再活动脚踝。",
+        ],
+      },
+      riskTags: ["general_information"],
+    },
+    reviewId: "d2300000-0000-4000-8000-000000000053",
+  },
+  {
+    item: {
+      id: "d2300000-0000-4000-8000-000000000061",
+      contentType: "activity" as const,
+      slug: "demo-safe-walk-challenge",
+    },
+    version: {
+      id: "d2300000-0000-4000-8000-000000000062",
+      title: "安全走动挑战",
+      summary: "在熟悉、安全的地方走动五分钟，数一数步数。",
+      body: {
+        movement: "move",
+        durationMinutes: 5,
+        location: "either",
+        materials: [],
+        adultSupervision: "recommended",
+        steps: [
+          "先确认地面没有杂物和车辆。",
+          "把手机收好，抬头慢慢走。",
+          "走完后喝几口水，告诉小伴感受。",
+        ],
+      },
+      riskTags: ["outdoor", "adult_supervision"],
+    },
+    reviewId: "d2300000-0000-4000-8000-000000000063",
+  },
+  {
+    item: {
+      id: "d2300000-0000-4000-8000-000000000071",
+      contentType: "activity" as const,
+      slug: "demo-find-five-colors",
+    },
+    version: {
+      id: "d2300000-0000-4000-8000-000000000072",
+      title: "找出五种颜色",
+      summary: "看看身边，找出五种不同颜色并画下来。",
+      body: {
+        movement: "quiet",
+        durationMinutes: 5,
+        location: "indoor",
+        materials: ["一张纸", "一支笔"],
+        adultSupervision: "none",
+        steps: [
+          "准备一张纸和一支笔。",
+          "在房间里找五种不同颜色。",
+          "画下你最喜欢的两个小物件。",
+        ],
+      },
+      riskTags: ["materials_required"],
+    },
+    reviewId: "d2300000-0000-4000-8000-000000000073",
+  },
+  {
+    item: {
+      id: "d2300000-0000-4000-8000-000000000081",
+      contentType: "activity" as const,
+      slug: "demo-tidy-one-corner",
+    },
+    version: {
+      id: "d2300000-0000-4000-8000-000000000082",
+      title: "整理一小格",
+      summary: "只整理书桌的一小格，完成就停，不用一次做完。",
+      body: {
+        movement: "quiet",
+        durationMinutes: 10,
+        location: "indoor",
+        materials: [],
+        adultSupervision: "none",
+        steps: [
+          "选定书桌的一小块地方。",
+          "把物品分成留下、放回和丢弃。",
+          "擦干净这一小格，然后欣赏成果。",
+        ],
+      },
+      riskTags: ["general_information"],
+    },
+    reviewId: "d2300000-0000-4000-8000-000000000083",
   },
 ] as const;
 

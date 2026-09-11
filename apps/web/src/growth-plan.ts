@@ -1,7 +1,9 @@
 import {
   childGrowthAttemptRequestSchema,
+  childGrowthGoalListResponseSchema,
   childGrowthPlanResponseSchema,
   type ChildGrowthAttemptRequest,
+  type ChildGrowthGoalListResponse,
   type ChildGrowthPlanResponse,
 } from "@xiaoban/contracts";
 
@@ -43,5 +45,33 @@ export async function recordChildGrowthAttempt(
       headers: { authorization: `Bearer ${token}` },
     },
     childGrowthPlanResponseSchema,
+  );
+}
+
+export async function loadChildGrowthGoals(
+  token: string,
+): Promise<ChildGrowthGoalListResponse> {
+  return requestJson(
+    "/api/v1/child/growth-goals",
+    {
+      method: "GET",
+      headers: { authorization: `Bearer ${token}` },
+    },
+    childGrowthGoalListResponseSchema,
+  );
+}
+
+export async function updateChildGrowthGoal(
+  token: string,
+  goalKey: ChildGrowthGoalListResponse["currentKey"],
+): Promise<ChildGrowthGoalListResponse> {
+  return requestJson(
+    "/api/v1/child/growth-goal",
+    {
+      method: "PATCH",
+      body: JSON.stringify({ requestId: crypto.randomUUID(), goalKey }),
+      headers: { authorization: `Bearer ${token}` },
+    },
+    childGrowthGoalListResponseSchema,
   );
 }

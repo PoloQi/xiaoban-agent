@@ -123,6 +123,7 @@ const draftJsonSchema = {
           type: "object",
           additionalProperties: false,
           required: [
+            "movement",
             "durationMinutes",
             "location",
             "materials",
@@ -130,6 +131,7 @@ const draftJsonSchema = {
             "steps",
           ],
           properties: {
+            movement: { type: "string", enum: ["move", "quiet"] },
             durationMinutes: { type: "integer", minimum: 5, maximum: 120 },
             location: { type: "string", enum: ["indoor", "outdoor", "either"] },
             materials: {

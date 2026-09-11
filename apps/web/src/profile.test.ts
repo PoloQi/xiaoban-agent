@@ -11,6 +11,7 @@ describe("child profile labels", () => {
       interests: ["drawing", "reading", "tidying"],
       companion: "cloud",
       completedAt: "2026-08-31T12:00:00.000Z",
+      updatedAt: null,
     };
 
     expect(childProfileLabels(profile)).toEqual({

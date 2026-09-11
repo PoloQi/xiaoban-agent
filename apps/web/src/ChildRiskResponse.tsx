@@ -5,11 +5,12 @@ import type { ChildChatResponse } from "@xiaoban/contracts";
 import "./child-risk-response.css";
 
 type FixedSafetyResponse = Extract<ChildChatResponse, { route: "fixed_safety" }>;
-type Detail = "evidence" | "adult" | null;
+type Detail = "evidence" | null;
 
 interface ChildRiskResponseProps {
   response: FixedSafetyResponse;
   onExitChat: () => void;
+  onOpenTrusted: () => void;
 }
 
 function RiskIcon({ name }: { name: "alert" | "arrow" | "exit" | "people" | "save" | "shield" }) {
@@ -24,7 +25,7 @@ function RiskIcon({ name }: { name: "alert" | "arrow" | "exit" | "people" | "sav
   return <svg aria-hidden="true" viewBox="0 0 24 24">{paths[name]}</svg>;
 }
 
-export function ChildRiskResponse({ response, onExitChat }: ChildRiskResponseProps) {
+export function ChildRiskResponse({ response, onExitChat, onOpenTrusted }: ChildRiskResponseProps) {
   const [detail, setDetail] = useState<Detail>(null);
 
   return (
@@ -76,19 +77,12 @@ export function ChildRiskResponse({ response, onExitChat }: ChildRiskResponsePro
         <button
           className="risk-response-action"
           type="button"
-          aria-expanded={detail === "adult"}
-          aria-controls="risk-adult-detail"
-          onClick={() => setDetail((current) => current === "adult" ? null : "adult")}
+          onClick={onOpenTrusted}
         >
           <span className="risk-response-action-icon"><RiskIcon name="people" /></span>
-          <span><strong>3. 告诉可信任的大人</strong><small>现在去找家人、老师或身边能帮助你的大人</small></span>
+          <span><strong>3. 告诉可信任的大人</strong><small>打开已核验的大人名单，找一位当面说</small></span>
           <RiskIcon name="arrow" />
         </button>
-        {detail === "adult" && (
-          <div className="risk-response-detail" id="risk-adult-detail" role="status">
-            不知道怎么开口，可以照着说：“我遇到一件让我担心的事，我需要你现在陪着我一起处理。”
-          </div>
-        )}
       </section>
 
       <aside className="risk-response-boundary">

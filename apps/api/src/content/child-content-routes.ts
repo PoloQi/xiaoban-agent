@@ -49,11 +49,12 @@ const activitySummarySchema = {
   additionalProperties: false,
   required: [
     "type", "revision", "slug", "title", "summary", "sourceLabel", "expiresAt",
-    "durationMinutes", "location", "adultSupervision",
+    "movement", "durationMinutes", "location", "adultSupervision",
   ],
   properties: {
     ...summaryBase,
     type: { type: "string", const: "activity" },
+    movement: { type: "string", enum: ["move", "quiet"] },
     durationMinutes: { type: "integer" },
     location: { type: "string", enum: ["indoor", "outdoor", "either"] },
     adultSupervision: {

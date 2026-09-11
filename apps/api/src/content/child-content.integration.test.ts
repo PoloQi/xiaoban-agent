@@ -142,6 +142,7 @@ async function createContent(input: {
       : "短暂离开屏幕看看远处。",
     content_body: JSON.stringify(input.type === "activity"
       ? {
+          movement: "quiet",
           durationMinutes: 10,
           location: "outdoor",
           materials: [],

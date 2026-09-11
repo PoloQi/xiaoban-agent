@@ -258,7 +258,7 @@ export interface GrowthAttemptsTable {
   request_id: string;
   request_hash: string;
   child_id: string;
-  goal_key: "screen-free-bedtime-30m";
+  goal_key: string;
   source: "manual" | "activity";
   activity_slug: string | null;
   target_minutes: number | null;
@@ -275,6 +275,8 @@ export interface ChildProfilesTable {
   interests: ColumnType<ChildInterest[], string, string>;
   companion: ChildCompanion;
   completed_at: Timestamp;
+  updated_at: Timestamp | null;
+  current_goal_id: string | null;
 }
 
 export interface ChildMoodCheckInsTable {

@@ -20,6 +20,7 @@ import { ChildGrowthPlan } from "./ChildGrowthPlan";
 import { ChildHome } from "./ChildHome";
 import { ChildKnowledgeCenter } from "./ChildKnowledgeCenter";
 import { ChildProfile } from "./ChildProfile";
+import { ChildProfileEdit } from "./ChildProfileEdit";
 import { ChildRiskResponse } from "./ChildRiskResponse";
 import { ChildRiskSent } from "./ChildRiskSent";
 import { ChildTrustedAdults } from "./ChildTrustedAdults";
@@ -42,6 +43,7 @@ interface ChildContentProps {
   token: string;
   onExit: () => void;
   onOpenAdult?: () => Promise<void>;
+  onProfileUpdated?: (next: CompletedChildProfile) => void;
 }
 
 function Icon({ name }: { name: "arrow" | "back" | "book" | "chat" | "clock" | "leaf" | "person" | "pin" | "plan" | "shield" }) {
@@ -129,7 +131,7 @@ function ContentCard({ item, onOpen }: { item: ChildContentSummary; onOpen: () =
   );
 }
 
-export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildContentProps) {
+export function ChildContent({ profile, token, onExit, onOpenAdult, onProfileUpdated }: ChildContentProps) {
   const { ageBand: childAgeBand, alias: childAlias, companion } = profile;
   const [tab, setTab] = useState<"chat" | "content" | "growth" | "profile">("chat");
   const [chatView, setChatView] = useState<"home" | "chat">("home");
@@ -154,7 +156,8 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
   const [safetyResponse, setSafetyResponse] = useState<Extract<ChildChatResponse, { route: "fixed_safety" }> | null>(null);
   const [riskSentOpen, setRiskSentOpen] = useState(false);
   const [knowledgeOrigin, setKnowledgeOrigin] = useState<"home" | "profile" | null>(null);
-  const [trustedOrigin, setTrustedOrigin] = useState<"home" | "profile" | "risk" | null>(null);
+  const [trustedOrigin, setTrustedOrigin] = useState<"home" | "profile" | "risk" | "lonely" | null>(null);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const visibleItems = items
     .filter((item) => filter === "all" || item.type === filter)
     .filter((item) => {
@@ -343,7 +346,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function openTrusted(origin: "home" | "profile" | "risk") {
+  function openTrusted(origin: "home" | "profile" | "risk" | "lonely") {
     setDetail(null);
     setTrustedOrigin(origin);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -353,11 +356,26 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
     const origin = trustedOrigin;
     setTrustedOrigin(null);
     if (origin === "profile") setTab("profile");
-    else if (origin === "home") {
+    else if (origin === "home" || origin === "lonely") {
       setChatView("home");
       setTab("chat");
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  if (profileEditOpen) {
+    return (
+      <ChildProfileEdit
+        profile={profile}
+        token={token}
+        onClose={() => { setProfileEditOpen(false); window.scrollTo({ top: 0 }); }}
+        onSaved={(next) => {
+          setProfileEditOpen(false);
+          onProfileUpdated?.(next);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
   }
 
   if (riskSentOpen) {
@@ -383,7 +401,13 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
       <ChildTrustedAdults
         token={token}
         onBack={closeTrusted}
-        backLabel={trustedOrigin === "profile" ? "返回我的" : trustedOrigin === "risk" ? "返回安全指引" : "返回儿童首页"}
+        backLabel={trustedOrigin === "profile"
+          ? "返回我的"
+          : trustedOrigin === "risk"
+            ? "返回安全指引"
+            : trustedOrigin === "lonely"
+              ? "返回陪我聊"
+              : "返回儿童首页"}
         {...(trustedOrigin === "risk" ? { onConfirmToldAdult: () => setRiskSentOpen(true) } : {})}
       />
     );
@@ -551,7 +575,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
         <button className="exit-content" type="button" onClick={onExit}>退出儿童内容</button>
       </header>
 
-      {tab === "profile" ? <ChildProfile profile={profile} onOpenKnowledge={() => openKnowledge("profile")} onOpenTrusted={() => openTrusted("profile")} {...(onOpenAdult === undefined ? {} : { onOpenAdult })} /> : tab === "growth" ? <ChildGrowthPlan token={token} /> : tab === "content" ? (
+      {tab === "profile" ? <ChildProfile profile={profile} onOpenKnowledge={() => openKnowledge("profile")} onOpenTrusted={() => openTrusted("profile")} {...(onOpenAdult === undefined ? {} : { onOpenAdult })} {...(onProfileUpdated === undefined ? {} : { onOpenProfileEdit: () => { setProfileEditOpen(true); window.scrollTo({ top: 0 }); } })} /> : tab === "growth" ? <ChildGrowthPlan token={token} /> : tab === "content" ? (
         <>
           <section className="content-hero">
             <div>
@@ -622,6 +646,7 @@ export function ChildContent({ profile, token, onExit, onOpenAdult }: ChildConte
           onBack={openHome}
           onSafetyResponse={setSafetyResponse}
           onOpenActivities={openActivitiesFromChat}
+          onOpenTrustedAdult={() => openTrusted("lonely")}
         />
       )}
 

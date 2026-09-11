@@ -2,10 +2,13 @@ import type { FastifyInstance } from "fastify";
 import type { ZodType } from "zod";
 
 import {
-  CHILD_GROWTH_GOAL_KEY,
+  CHILD_GROWTH_GOAL_LIST_SCHEMA_VERSION,
   CHILD_GROWTH_PLAN_SCHEMA_VERSION,
   childGrowthAttemptRequestSchema,
+  childGrowthGoalKeySchema,
+  childGrowthGoalUpdateRequestSchema,
   type ChildGrowthAttemptRequest,
+  type ChildGrowthGoalUpdateRequest,
 } from "@xiaoban/contracts";
 
 import { PublicAppError } from "../errors.js";
@@ -36,6 +39,8 @@ const errorSchema = {
   },
 } as const;
 
+const goalKeyEnumValues = childGrowthGoalKeySchema.options;
+
 const growthPlanJsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -57,7 +62,7 @@ const growthPlanJsonSchema = {
       additionalProperties: false,
       required: ["key", "title", "alternativeAction", "targetAttempts", "attemptCount", "status", "todayRecorded"],
       properties: {
-        key: { type: "string", const: CHILD_GROWTH_GOAL_KEY },
+        key: { type: "string", enum: goalKeyEnumValues },
         title: { type: "string" },
         alternativeAction: { type: "string" },
         targetAttempts: { type: "integer", const: 3 },
@@ -117,9 +122,35 @@ const growthPlanJsonSchema = {
           additionalProperties: false,
           required: ["key", "title"],
           properties: {
-            key: { type: "string", const: CHILD_GROWTH_GOAL_KEY },
+            key: { type: "string", enum: goalKeyEnumValues },
             title: { type: "string" },
           },
+        },
+      },
+    },
+  },
+} as const;
+
+const goalListJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["schemaVersion", "currentKey", "goals"],
+  properties: {
+    schemaVersion: { type: "string", const: CHILD_GROWTH_GOAL_LIST_SCHEMA_VERSION },
+    currentKey: { type: "string", enum: goalKeyEnumValues },
+    goals: {
+      type: "array",
+      minItems: 3,
+      maxItems: 10,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["key", "title", "alternativeAction", "description"],
+        properties: {
+          key: { type: "string", enum: goalKeyEnumValues },
+          title: { type: "string" },
+          alternativeAction: { type: "string" },
+          description: { type: "string" },
         },
       },
     },
@@ -151,6 +182,40 @@ export function registerChildGrowthRoutes(
       },
     },
     async (request) => service.get(token(request.headers.authorization)),
+  );
+
+  app.get(
+    "/api/v1/child/growth-goals",
+    {
+      schema: {
+        headers: headersSchema,
+        response: { 200: goalListJsonSchema, "4xx": errorSchema },
+      },
+    },
+    async (request) => service.listGoals(token(request.headers.authorization)),
+  );
+
+  app.patch<{ Body: ChildGrowthGoalUpdateRequest }>(
+    "/api/v1/child/growth-goal",
+    {
+      schema: {
+        headers: headersSchema,
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["requestId", "goalKey"],
+          properties: {
+            requestId: { type: "string", format: "uuid" },
+            goalKey: { type: "string", enum: goalKeyEnumValues },
+          },
+        },
+        response: { 200: goalListJsonSchema, "4xx": errorSchema },
+      },
+    },
+    async (request, reply) => reply.code(200).send(await service.updateGoal(
+      token(request.headers.authorization),
+      parse(childGrowthGoalUpdateRequestSchema, request.body),
+    )),
   );
 
   app.post<{ Body: ChildGrowthAttemptRequest }>(

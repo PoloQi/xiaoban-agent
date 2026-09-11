@@ -14,6 +14,7 @@ import {
   childGrowthPlanResponseSchema,
   childOnboardingCompletionRequestSchema,
   childOnboardingResponseSchema,
+  childProfileUpdateRequestSchema,
   chatTurnSchema,
   childChatRequestSchema,
   childChatResponseSchema,
@@ -545,6 +546,7 @@ describe("child onboarding contracts", () => {
         interests: ["drawing", "reading"],
         companion: "cloud",
         completedAt: "2026-08-31T12:00:00.000Z",
+        updatedAt: null,
       },
     });
 
@@ -573,6 +575,94 @@ describe("child onboarding contracts", () => {
       phone: "not-allowed",
     }).success).toBe(false);
   });
+
+  it("rejects an all-digit alias on the onboarding profile response", () => {
+    // aliasSchema 拒绝纯数字以避免儿童误填电话号码
+    expect(childOnboardingResponseSchema.safeParse({
+      schemaVersion: "child-onboarding-2026-08-v1",
+      status: "completed",
+      profile: {
+        alias: "13800138000",
+        ageBand: "9_11",
+        grade: "grade_5",
+        interests: ["drawing"],
+        companion: "sprout",
+        completedAt: "2026-08-31T12:00:00.000Z",
+      },
+    }).success).toBe(false);
+  });
+});
+
+describe("child profile update contracts", () => {
+  it("accepts a profile update with all four editable fields", () => {
+    const result = childProfileUpdateRequestSchema.safeParse({
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb5e0",
+      alias: "小山雀",
+      grade: "grade_5",
+      interests: ["drawing", "reading"],
+      companion: "cloud",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a profile update missing the requestId", () => {
+    expect(childProfileUpdateRequestSchema.safeParse({
+      alias: "小山雀",
+      grade: "grade_5",
+      interests: ["drawing"],
+      companion: "sprout",
+    }).success).toBe(false);
+  });
+
+  it("rejects a profile update with an out-of-band grade", () => {
+    // grade_8 不在 9_11 ageBand 允许的范围内；
+    // schema 层不强制 ageBand 关系，路由层负责校验 ageBand 兼容性
+    expect(childProfileUpdateRequestSchema.safeParse({
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb5e1",
+      alias: "小山雀",
+      grade: "invalid_grade",
+      interests: ["drawing"],
+      companion: "sprout",
+    }).success).toBe(false);
+  });
+
+  it("rejects a profile update with empty interests", () => {
+    expect(childProfileUpdateRequestSchema.safeParse({
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb5e2",
+      alias: "小山雀",
+      grade: "grade_5",
+      interests: [],
+      companion: "sprout",
+    }).success).toBe(false);
+  });
+
+  it("rejects a profile update with phone-like or non-allowed alias characters", () => {
+    expect(childProfileUpdateRequestSchema.safeParse({
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb5e3",
+      alias: "13800138000",
+      grade: "grade_5",
+      interests: ["drawing"],
+      companion: "sprout",
+    }).success).toBe(false);
+    expect(childProfileUpdateRequestSchema.safeParse({
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb5e4",
+      alias: "小 山雀", // 包含空格，不在允许字符集
+      grade: "grade_5",
+      interests: ["drawing"],
+      companion: "sprout",
+    }).success).toBe(false);
+  });
+
+  it("rejects a profile update leaking extra contact data via strict mode", () => {
+    expect(childProfileUpdateRequestSchema.safeParse({
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb5e5",
+      alias: "小山雀",
+      grade: "grade_5",
+      interests: ["drawing"],
+      companion: "sprout",
+      phone: "13800138000",
+    }).success).toBe(false);
+  });
 });
 
 describe("phase 3A content contracts", () => {
@@ -595,6 +685,7 @@ describe("phase 3A content contracts", () => {
         type: "activity",
         riskTags: ["outdoor", "weather_sensitive"],
         body: {
+          movement: "quiet",
           durationMinutes: 10,
           location: "outdoor",
           materials: [],
@@ -702,6 +793,7 @@ describe("phase 3B content workflow contracts", () => {
         expiresAt: "2026-09-18T00:00:00.000Z",
         riskTags: ["outdoor"],
         body: {
+          movement: "quiet",
           durationMinutes: 10,
           location: "outdoor",
           materials: [],
@@ -780,6 +872,7 @@ describe("phase 3C child content contracts", () => {
           summary: "在安全位置观察天空。",
           sourceLabel: "本地合成验证内容",
           expiresAt: "2027-08-18T00:00:00.000Z",
+          movement: "quiet",
           durationMinutes: 10,
           location: "outdoor",
           adultSupervision: "recommended",
@@ -792,6 +885,53 @@ describe("phase 3C child content contracts", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects an activity missing its movement classification", () => {
+    const result = childContentListResponseSchema.safeParse({
+      items: [
+        {
+          type: "activity",
+          revision: "0123456789abcdef",
+          slug: "synthetic-cloud-walk",
+          title: "抬头找三种云",
+          summary: "在安全位置观察天空。",
+          sourceLabel: "本地合成验证内容",
+          expiresAt: "2027-08-18T00:00:00.000Z",
+          durationMinutes: 10,
+          location: "outdoor",
+          adultSupervision: "recommended",
+        },
+      ],
+      catalogRevision: "fedcba9876543210",
+      pagination: { limit: 12, offset: 0, total: 1 },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an activity with an unknown movement value", () => {
+    const result = childContentListResponseSchema.safeParse({
+      items: [
+        {
+          type: "activity",
+          revision: "0123456789abcdef",
+          slug: "synthetic-cloud-walk",
+          title: "抬头找三种云",
+          summary: "在安全位置观察天空。",
+          sourceLabel: "本地合成验证内容",
+          expiresAt: "2027-08-18T00:00:00.000Z",
+          movement: "sitting",
+          durationMinutes: 10,
+          location: "outdoor",
+          adultSupervision: "recommended",
+        },
+      ],
+      catalogRevision: "fedcba9876543210",
+      pagination: { limit: 12, offset: 0, total: 1 },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("accepts activity and knowledge details without internal review identities", () => {
     const activity = childContentDetailSchema.safeParse({
       type: "activity",
@@ -801,6 +941,7 @@ describe("phase 3C child content contracts", () => {
       summary: "在安全位置观察天空。",
       sourceLabel: "本地合成验证内容",
       expiresAt: "2027-08-18T00:00:00.000Z",
+      movement: "quiet",
       durationMinutes: 10,
       location: "outdoor",
       adultSupervision: "recommended",
@@ -1240,21 +1381,139 @@ describe("child chat contracts", () => {
     }).success).toBe(false);
   });
 
+  it("supports suggested replies and activity recommendations for the bored storyline", () => {
+    const activitySummary = {
+      revision: "0123456789abcdef",
+      slug: "synthetic-stretch-indoors",
+      title: "在屋里伸展",
+      summary: "站起来，慢慢伸展手臂和肩膀。",
+      sourceLabel: "本地合成验证内容",
+      expiresAt: "2027-08-18T00:00:00.000Z",
+      type: "activity",
+      movement: "move",
+      durationMinutes: 5,
+      location: "indoor",
+      adultSupervision: "none",
+    } as const;
+
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "reply",
+      reply: "你现在更想动一动，还是安静做点事？",
+      suggestedReplies: ["想动一动", "安静做点事"],
+    }).success).toBe(true);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "activity_recommendations",
+      movement: "move",
+      reply: "我找了几个能让身体动起来的小活动。",
+      activities: [activitySummary],
+    }).success).toBe(true);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "reply",
+      reply: "你现在更想动一动，还是安静做点事？",
+      suggestedReplies: ["一", "二", "三", "四"],
+    }).success).toBe(false);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "activity_recommendations",
+      movement: "run",
+      reply: "我找了几个活动。",
+      activities: [activitySummary],
+    }).success).toBe(false);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "activity_recommendations",
+      movement: "quiet",
+      reply: "我找了几个活动。",
+      activities: Array.from({ length: 4 }, (_value, index) => ({
+        ...activitySummary,
+        slug: `synthetic-quiet-${index}`,
+      })),
+    }).success).toBe(false);
+  });
+
   it("keeps internal orchestration history bounded and optional", () => {
     expect(internalAiOrchestrationRequestSchema.safeParse({
-      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb620",
+      requestId: "019c111a-f9e0-7dd8-a24c-8dfd908bb620",
       text: "虚构人物想找一个屏幕休息方法。",
       ageBand: "9_11",
       contentType: "knowledge",
     }).success).toBe(true);
     expect(internalAiOrchestrationRequestSchema.safeParse({
-      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb620",
+      requestId: "019c111a-f9e0-7dd8-a24c-8dfd908bb620",
       text: "虚构人物想找一个屏幕休息方法。",
       ageBand: "9_11",
       contentType: "knowledge",
       history: Array.from({ length: 9 }, () => ({ role: "child", text: "x" })),
     }).success).toBe(false);
     expect(chatTurnSchema.safeParse({ role: "assistant", text: "嗨。" }).success).toBe(true);
+  });
+
+  it("routes the lonely storyline into a connection suggestion without leaking contact data", () => {
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "lonely_connection",
+      reply: "我们可以先准备好一句开口的话，再去请外婆帮忙联系。",
+      connectionLabel: "外婆",
+      contactIntention: "trusted_adult",
+      openingLine: "我今天很想你，我想告诉你一件小事。",
+      suggestedReplies: ["先聊到这里"],
+    }).success).toBe(true);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "lonely_connection",
+      reply: "我们可以先准备好一句开口的话。",
+      connectionLabel: "外婆",
+      contactIntention: "self_record",
+      openingLine: "我今天很想你。",
+    }).success).toBe(true);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "lonely_connection",
+      reply: "我们可以先准备好一句开口的话。",
+      connectionLabel: "外婆",
+      contactIntention: "unknown_intention",
+      openingLine: "我今天很想你。",
+    }).success).toBe(false);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "lonely_connection",
+      reply: "我们可以先准备好一句开口的话。",
+      connectionLabel: "外婆",
+      contactIntention: "trusted_adult",
+      openingLine: "我今天很想你。",
+      phoneNumber: "13800000000",
+    }).success).toBe(false);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "lonely_connection",
+      reply: "我们可以先准备好一句开口的话。",
+      connectionLabel: "",
+      contactIntention: "trusted_adult",
+      openingLine: "我今天很想你。",
+    }).success).toBe(false);
+    expect(childChatResponseSchema.safeParse({
+      schemaVersion: "child-chat-2026-09-v2",
+      requestId: "019c111a-f9e0-7dd8-a24c-6dfd908bb660",
+      route: "lonely_connection",
+      reply: "我们可以先准备好一句开口的话。",
+      connectionLabel: "外婆",
+      contactIntention: "trusted_adult",
+      openingLine: "我今天很想你。",
+      suggestedReplies: ["一", "二", "三", "四"],
+    }).success).toBe(false);
   });
 });
 

@@ -22,6 +22,7 @@ export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
 export const errorCodeSchema = z.enum([
   "INVALID_REQUEST",
   "ROUTE_NOT_FOUND",
+  "NOT_FOUND",
   "DEPENDENCY_UNAVAILABLE",
   "UNAUTHORIZED",
   "FORBIDDEN",
@@ -64,7 +65,10 @@ const aliasSchema = z
   .trim()
   .min(2)
   .max(20)
-  .regex(/^[\p{L}\p{N}·_-]+$/u);
+  .regex(/^[\p{L}\p{N}·_-]+$/u)
+  .refine((value) => !/^\d+$/u.test(value), {
+    message: "alias 不能是纯数字（可能误填电话号码）",
+  });
 const requestIdSchema = z.uuid();
 const invitationCodeSchema = z.string().trim().min(8).max(128);
 const sessionTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
@@ -190,6 +194,12 @@ const childOnboardingProfileSchema = z.strictObject({
   interests: z.array(childInterestSchema).min(1).max(4),
   companion: childCompanionSchema,
   completedAt: z.iso.datetime(),
+  /**
+   * 资料最近一次编辑时间；首次完成后为 null。
+   * 之前完成时无此字段——可使用 .transform 兼容历史数据，
+   * 但本批次前所有完成都是首版，无历史响应需要回填。
+   */
+  updatedAt: z.iso.datetime().nullable(),
 });
 
 export const childOnboardingResponseSchema = z.discriminatedUnion("status", [
@@ -212,6 +222,23 @@ export const childOnboardingCompletionRequestSchema = z.strictObject({
   companion: childCompanionSchema,
 });
 
+/**
+ * 资料编辑请求：儿童在「我的」页修改自己的昵称/年级/兴趣/伙伴。
+ *
+ * 与 onboarding.completion 的区别：
+ * - 包含 alias（创建账户时已写入 child_accounts，此处允许修改但不改 account id）
+ * - 不会创建新账户/不重置边界说明版本/不替换会话
+ * - grade 必须仍在当前 ageBand 允许的范围内（与 onboarding 共用 ageBand/grade 校验）
+ * - 任何字段变更都会写 updated_at；完成时间 completedAt 保持首次完成时间
+ */
+export const childProfileUpdateRequestSchema = z.strictObject({
+  requestId: requestIdSchema,
+  alias: aliasSchema,
+  grade: childGradeSchema,
+  interests: z.array(childInterestSchema).min(1).max(4),
+  companion: childCompanionSchema,
+});
+
 export type InvitationPreviewRequest = z.infer<typeof invitationPreviewRequestSchema>;
 export type InvitationPreviewResponse = z.infer<typeof invitationPreviewResponseSchema>;
 export type GuardianConfirmationRequest = z.infer<typeof guardianConfirmationRequestSchema>;
@@ -229,6 +256,7 @@ export type ChildOnboardingResponse = z.infer<typeof childOnboardingResponseSche
 export type ChildOnboardingCompletionRequest = z.infer<
   typeof childOnboardingCompletionRequestSchema
 >;
+export type ChildProfileUpdateRequest = z.infer<typeof childProfileUpdateRequestSchema>;
 
 export const contentTypeSchema = z.enum(["activity", "knowledge"]);
 export const contentAgeBandSchema = z.enum(["9_11", "12_14", "both"]);
@@ -277,9 +305,12 @@ const contentVersionCommonSchema = z.object({
   riskTags: z.array(contentRiskTagSchema).max(6),
 });
 
+export const activityMovementSchema = z.enum(["move", "quiet"]);
+
 const activityContentDraftSchema = contentVersionCommonSchema.extend({
   type: z.literal("activity"),
   body: z.object({
+    movement: activityMovementSchema,
     durationMinutes: z.number().int().min(5).max(120),
     location: z.enum(["indoor", "outdoor", "either"]),
     materials: z.array(z.string().trim().min(1).max(40)).max(8),
@@ -348,6 +379,7 @@ export const contentReviewRecordSchema = z
     path: ["reviewerId"],
   });
 
+export type ActivityMovement = z.infer<typeof activityMovementSchema>;
 export type ContentType = z.infer<typeof contentTypeSchema>;
 export type ContentAgeBand = z.infer<typeof contentAgeBandSchema>;
 export type ContentLifecycle = z.infer<typeof contentLifecycleSchema>;
@@ -442,8 +474,9 @@ const childContentSummaryBaseSchema = z.object({
   expiresAt: z.iso.datetime(),
 });
 
-const childActivitySummarySchema = childContentSummaryBaseSchema.extend({
+export const childActivitySummarySchema = childContentSummaryBaseSchema.extend({
   type: z.literal("activity"),
+  movement: activityMovementSchema,
   durationMinutes: z.number().int().min(5).max(120),
   location: z.enum(["indoor", "outdoor", "either"]),
   adultSupervision: z.enum(["none", "recommended", "required"]),
@@ -486,12 +519,41 @@ export const childContentDetailSchema = z.discriminatedUnion("type", [
 ]);
 
 export type ChildContentListQuery = z.infer<typeof childContentListQuerySchema>;
+export type ChildActivitySummary = z.infer<typeof childActivitySummarySchema>;
 export type ChildContentSummary = z.infer<typeof childContentSummarySchema>;
 export type ChildContentListResponse = z.infer<typeof childContentListResponseSchema>;
 export type ChildContentDetail = z.infer<typeof childContentDetailSchema>;
 
 export const CHILD_GROWTH_PLAN_SCHEMA_VERSION = "child-growth-plan-2026-08-v1";
-export const CHILD_GROWTH_GOAL_KEY = "screen-free-bedtime-30m";
+export const CHILD_GROWTH_GOAL_LIST_SCHEMA_VERSION = "child-growth-goal-list-2026-09-v1";
+export const DEFAULT_CHILD_GROWTH_GOAL_KEY = "screen-free-bedtime-30m";
+
+export const childGrowthGoalKeySchema = z.enum([
+  "screen-free-bedtime-30m",
+  "daily-move-20m",
+  "daily-read-10-pages",
+  "tidy-my-space",
+  "three-good-things",
+]);
+export type ChildGrowthGoalKey = z.infer<typeof childGrowthGoalKeySchema>;
+
+export const childGrowthGoalOptionSchema = z.object({
+  key: childGrowthGoalKeySchema,
+  title: z.string().min(2).max(40),
+  alternativeAction: z.string().min(2).max(120),
+  description: z.string().min(2).max(240),
+}).strict();
+
+export const childGrowthGoalListResponseSchema = z.object({
+  schemaVersion: z.literal(CHILD_GROWTH_GOAL_LIST_SCHEMA_VERSION),
+  currentKey: childGrowthGoalKeySchema,
+  goals: z.array(childGrowthGoalOptionSchema).min(3).max(10),
+}).strict();
+
+export const childGrowthGoalUpdateRequestSchema = z.strictObject({
+  requestId: requestIdSchema,
+  goalKey: childGrowthGoalKeySchema,
+});
 
 export const childGrowthAttemptRequestSchema = z.discriminatedUnion("source", [
   z.object({
@@ -521,9 +583,9 @@ export const childGrowthPlanResponseSchema = z.object({
     timezone: z.literal("Asia/Shanghai"),
   }).strict(),
   goal: z.object({
-    key: z.literal(CHILD_GROWTH_GOAL_KEY),
-    title: z.literal("睡前30分钟不刷短视频"),
-    alternativeAction: z.literal("听一段故事、整理书包，或者和身边的大人聊五分钟。"),
+    key: childGrowthGoalKeySchema,
+    title: z.string().min(2).max(40),
+    alternativeAction: z.string().min(2).max(120),
     targetAttempts: z.literal(3),
     attemptCount: z.number().int().min(0),
     status: z.enum(["not_started", "in_progress", "completed"]),
@@ -544,14 +606,17 @@ export const childGrowthPlanResponseSchema = z.object({
     summary: z.string().min(2).max(240),
     choices: z.array(childGrowthChoiceSchema).max(12),
     nextGoal: z.object({
-      key: z.literal(CHILD_GROWTH_GOAL_KEY),
-      title: z.literal("睡前30分钟不刷短视频"),
+      key: childGrowthGoalKeySchema,
+      title: z.string().min(2).max(40),
     }).strict(),
   }).strict(),
 }).strict();
 
 export type ChildGrowthAttemptRequest = z.infer<typeof childGrowthAttemptRequestSchema>;
 export type ChildGrowthPlanResponse = z.infer<typeof childGrowthPlanResponseSchema>;
+export type ChildGrowthGoalOption = z.infer<typeof childGrowthGoalOptionSchema>;
+export type ChildGrowthGoalListResponse = z.infer<typeof childGrowthGoalListResponseSchema>;
+export type ChildGrowthGoalUpdateRequest = z.infer<typeof childGrowthGoalUpdateRequestSchema>;
 
 export const GUARDIAN_DASHBOARD_SCHEMA_VERSION = "guardian-dashboard-2026-09-v1";
 
@@ -1010,6 +1075,7 @@ const childChatReplyResponseSchema = z.object({
   requestId: requestIdSchema,
   route: z.literal("reply"),
   reply: z.string().min(1).max(800),
+  suggestedReplies: z.array(z.string().trim().min(1).max(40)).max(3).optional(),
 }).strict();
 
 const childChatFixedSafetyResponseSchema = z.object({
@@ -1022,9 +1088,33 @@ const childChatFixedSafetyResponseSchema = z.object({
   notificationStatus: z.literal("not_sent"),
 }).strict();
 
+const childChatActivityRecommendationsResponseSchema = z.object({
+  schemaVersion: z.literal(CHILD_CHAT_SCHEMA_VERSION),
+  requestId: requestIdSchema,
+  route: z.literal("activity_recommendations"),
+  movement: activityMovementSchema,
+  reply: z.string().min(1).max(800),
+  activities: z.array(childActivitySummarySchema).min(1).max(3),
+}).strict();
+
+export const lonelyConnectionIntentionSchema = z.enum(["trusted_adult", "self_record"]);
+
+const childChatLonelyConnectionResponseSchema = z.object({
+  schemaVersion: z.literal(CHILD_CHAT_SCHEMA_VERSION),
+  requestId: requestIdSchema,
+  route: z.literal("lonely_connection"),
+  reply: z.string().min(1).max(800),
+  connectionLabel: z.string().trim().min(1).max(12),
+  contactIntention: lonelyConnectionIntentionSchema,
+  openingLine: z.string().trim().min(1).max(240),
+  suggestedReplies: z.array(z.string().trim().min(1).max(40)).max(3).optional(),
+}).strict();
+
 export const childChatResponseSchema = z.discriminatedUnion("route", [
   childChatReplyResponseSchema,
   childChatFixedSafetyResponseSchema,
+  childChatActivityRecommendationsResponseSchema,
+  childChatLonelyConnectionResponseSchema,
 ]);
 
 export const RISK_POLICY_VERSION = "risk-policy-2026-08-v1";
@@ -1855,6 +1945,7 @@ export type InternalAiOrchestrationResult = z.infer<
 export type ChatTurn = z.infer<typeof chatTurnSchema>;
 export type ChildChatRequest = z.infer<typeof childChatRequestSchema>;
 export type ChildChatResponse = z.infer<typeof childChatResponseSchema>;
+export type LonelyConnectionIntention = z.infer<typeof lonelyConnectionIntentionSchema>;
 export type GenerationControlState = z.infer<typeof generationControlStateSchema>;
 export type GenerationControlReason = z.infer<typeof generationControlReasonSchema>;
 export type GenerationControlChangeRequest = z.infer<

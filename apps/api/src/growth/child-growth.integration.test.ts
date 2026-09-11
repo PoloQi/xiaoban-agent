@@ -122,6 +122,7 @@ async function createPublishedActivity(slug: string): Promise<void> {
     title: "整理一小格",
     summary: "只整理桌面的一小格，完成就停。",
     content_body: JSON.stringify({
+      movement: "quiet",
       durationMinutes: 10,
       location: "indoor",
       materials: [],
@@ -269,5 +270,67 @@ describe("child growth plan APIs", () => {
     });
     expect(conflict.statusCode).toBe(409);
     expect(errorResponseSchema.parse(conflict.json()).error.code).toBe("IDEMPOTENCY_CONFLICT");
+  });
+
+  it("exposes the goal catalog and lets the child switch current goal", async () => {
+    const { childToken } = await createChild();
+    const initial = await app.inject({
+      method: "GET",
+      url: "/api/v1/child/growth-goals",
+      headers: authorization(childToken),
+    });
+    expect(initial.statusCode).toBe(200);
+    const list = initial.json() as {
+      currentKey: string;
+      goals: Array<{ key: string; title: string; alternativeAction: string; description: string }>;
+    };
+    expect(list.currentKey).toBe("screen-free-bedtime-30m");
+    expect(list.goals.length).toBeGreaterThanOrEqual(3);
+    expect(list.goals.find((goal) => goal.key === "daily-move-20m")).toBeDefined();
+
+    const switched = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/growth-goal",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        goalKey: "daily-move-20m",
+      },
+    });
+    expect(switched.statusCode).toBe(200);
+    expect((switched.json() as { currentKey: string }).currentKey).toBe("daily-move-20m");
+
+    const plan = await app.inject({
+      method: "GET",
+      url: "/api/v1/child/growth-plan",
+      headers: authorization(childToken),
+    });
+    expect(plan.statusCode).toBe(200);
+    expect((plan.json() as { goal: { key: string; title: string } }).goal).toMatchObject({
+      key: "daily-move-20m",
+    });
+
+    const unknown = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/growth-goal",
+      headers: authorization(childToken),
+      payload: {
+        requestId: randomUUID(),
+        goalKey: "not-in-catalog",
+      },
+    });
+    expect(unknown.statusCode).toBe(400);
+
+    const guardian = await createChild();
+    const forbidden = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/child/growth-goal",
+      headers: authorization(guardian.guardianToken),
+      payload: {
+        requestId: randomUUID(),
+        goalKey: "tidy-my-space",
+      },
+    });
+    expect(forbidden.statusCode).toBe(403);
   });
 });

@@ -88,6 +88,7 @@ export function toChildContentSummary(row: VisibleContentRow): ChildContentSumma
     ? {
         ...common,
         type: "activity",
+        movement: draft.body.movement,
         durationMinutes: draft.body.durationMinutes,
         location: draft.body.location,
         adultSupervision: draft.body.adultSupervision,

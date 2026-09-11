@@ -9,13 +9,14 @@ interface ChildProfileProps {
   onOpenKnowledge: () => void;
   onOpenTrusted: () => void;
   onOpenAdult?: () => Promise<void>;
+  onOpenProfileEdit?: () => void;
 }
 
 function ProfileIcon({ children }: { children: ReactNode }) {
   return <svg aria-hidden="true" viewBox="0 0 24 24">{children}</svg>;
 }
 
-export function ChildProfile({ profile, onOpenKnowledge, onOpenTrusted, onOpenAdult }: ChildProfileProps) {
+export function ChildProfile({ profile, onOpenKnowledge, onOpenTrusted, onOpenAdult, onOpenProfileEdit }: ChildProfileProps) {
   const labels = childProfileLabels(profile);
   const companion = COMPANION_COPY[profile.companion];
   const [adultState, setAdultState] = useState<"idle" | "loading" | "error">("idle");
@@ -74,6 +75,20 @@ export function ChildProfile({ profile, onOpenKnowledge, onOpenTrusted, onOpenAd
             <dd><strong>{companion.name}</strong><small>{companion.description}</small></dd>
           </div>
         </dl>
+
+        {onOpenProfileEdit !== undefined && (
+          <div className="child-profile-edit-entry">
+            <div>
+              <small>EDIT PROFILE</small>
+              <strong>修改我的资料</strong>
+              <p>可以改昵称、年级、兴趣或换一个伙伴。不会重新看边界说明，也不会影响可信任的大人名单。</p>
+            </div>
+            <button type="button" onClick={onOpenProfileEdit}>
+              <ProfileIcon><path d="M4 20h4l11-11-4-4L4 16v4Z" /><path d="m14 5 4 4" /></ProfileIcon>
+              修改
+            </button>
+          </div>
+        )}
       </section>
 
       <button className="child-profile-knowledge child-profile-trusted" type="button" onClick={onOpenTrusted}>

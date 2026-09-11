@@ -1,9 +1,23 @@
 :root {
-  color: #25342b;
+  color: #183B3A;
   background: #ede8da;
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+
+  /* Design tokens (mirrors docs/04_DESIGN_STANDARD.md §2). */
+  --design-teal: #0F766E;
+  --design-teal-deep: #0A5C56;
+  --design-grow: #416D3A;
+  --design-warm: #D6A447;
+  --design-danger: #B91C1C;
+  --design-paper: #F5F0E4;
+  --design-surface: #FFFDF7;
+  --design-ink: #183B3A;
+  --design-ink-soft: #526865;
+  --design-radius-card: 20px;
+  --design-radius-pill: 999px;
+  --design-tap: 44px;
 }
 
 * {
@@ -1251,6 +1265,33 @@ h2 {
 }
 
 .content-filters button.is-active {
+  border-color: var(--field-green);
+  background: var(--field-green);
+  color: white;
+}
+
+.content-subfilters {
+  display: flex;
+  gap: 8px;
+  margin: -12px 0 20px;
+  overflow-x: auto;
+  padding: 3px 3px 8px;
+  scrollbar-width: thin;
+}
+
+.content-subfilters button {
+  min-height: 40px;
+  padding: 7px 15px;
+  border: 1px solid #b7c2bb;
+  border-radius: 999px;
+  background: rgb(255 253 247 / 70%);
+  color: #526865;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.content-subfilters button.is-active {
   border-color: var(--field-green);
   background: var(--field-green);
   color: white;
