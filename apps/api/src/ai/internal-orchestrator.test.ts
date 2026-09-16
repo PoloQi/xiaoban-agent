@@ -261,7 +261,7 @@ describe("InternalAiOrchestrator", () => {
       status: "static_fallback",
       reasonCode: "output_rejected",
       contentSlugs: ["synthetic-screen-break"],
-      trace: { outputPolicyVersion: "output-safety-2026-08-v1" },
+      trace: { outputPolicyVersion: "output-safety-2026-09-v3" },
     });
     expect(result).not.toHaveProperty("candidate");
     expect(JSON.stringify(result)).not.toContain("只有我懂你");

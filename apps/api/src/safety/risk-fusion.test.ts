@@ -37,7 +37,7 @@ function model(
     trace: {
       provider: "deepseek",
       model: "deepseek-v4-pro",
-      classifierVersion: "risk-classifier-deepseek-v2",
+      classifierVersion: "risk-classifier-deepseek-v3",
       durationMs: 1,
       usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
       structure: {

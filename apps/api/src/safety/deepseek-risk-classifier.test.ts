@@ -61,14 +61,14 @@ describe("DeepSeekRiskClassifier", () => {
       response_format: { type: "json_object" },
       max_tokens: 256,
     });
-    expect(JSON.stringify(body)).toContain("risk-classifier-deepseek-v2");
+    expect(JSON.stringify(body)).toContain("risk-classifier-deepseek-v3");
     expect(result).toMatchObject({
       source: "model",
       level: "L2",
       primaryCategory: "bullying",
       trace: {
         durationMs: 0,
-        classifierVersion: "risk-classifier-deepseek-v2",
+        classifierVersion: "risk-classifier-deepseek-v3",
         structure: {
           attemptCount: 1,
           firstAttemptStructureValid: true,
@@ -243,6 +243,37 @@ describe("DeepSeekRiskClassifier", () => {
     expect(JSON.stringify(result)).not.toContain(privateValue);
   });
 
+  it("correction prompt carries the contract level-category mapping and reasonCodes shape (release-eval-risk-l2-049 regression)", async () => {
+    const capturedBodies: string[] = [];
+    const transport = vi.fn(async (_url, init) => {
+      capturedBodies.push(String(init?.body));
+      return transport.mock.calls.length === 1
+        ? providerResponse(JSON.stringify({
+          level: "L0",
+          primaryCategory: "bullying",
+          reasonCodes: ["repeated_threat"],
+        }))
+        : providerResponse(JSON.stringify({
+          level: "L2",
+          primaryCategory: "bullying",
+          reasonCodes: ["repeated_threat"],
+        }));
+    });
+    const classifier = new DeepSeekRiskClassifier(config, transport, () => 125);
+
+    const result = await classifier.classify(request);
+
+    expect(result).toMatchObject({ level: "L2", primaryCategory: "bullying" });
+    const correctiveBody = JSON.parse(capturedBodies[1]!) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    const correctiveSystem = correctiveBody.messages[0]!.content;
+    expect(correctiveSystem).toContain("ordinary:L0");
+    expect(correctiveSystem).toContain("bullying:L2");
+    expect(correctiveSystem).toContain("active_danger:L3");
+    expect(correctiveSystem).toContain("self_harm:L2,L3");
+    expect(correctiveSystem).toContain("reasonCodes");
+  });
   it("fails closed after one corrective call and preserves safe first-failure metadata", async () => {
     const privateValue = "private malformed classifier output";
     const transport = vi.fn(async () => providerResponse(JSON.stringify({

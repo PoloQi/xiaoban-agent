@@ -69,7 +69,7 @@ const aliasSchema = z
   .refine((value) => !/^\d+$/u.test(value), {
     message: "alias 不能是纯数字（可能误填电话号码）",
   });
-const requestIdSchema = z.uuid();
+export const requestIdSchema = z.uuid();
 const invitationCodeSchema = z.string().trim().min(8).max(128);
 const sessionTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u);
 
@@ -876,7 +876,7 @@ export const internalAiGenerationResultSchema = z.object({
   }).strict(),
 }).strict();
 
-export const OUTPUT_SAFETY_POLICY_VERSION = "output-safety-2026-08-v1";
+export const OUTPUT_SAFETY_POLICY_VERSION = "output-safety-2026-09-v3";
 
 export const outputSafetyReasonSchema = z.enum([
   "unretrieved_content_reference",
@@ -884,6 +884,7 @@ export const outputSafetyReasonSchema = z.enum([
   "contact_or_external_link",
   "dangerous_instruction",
   "professional_overreach",
+  "age_inappropriate_content",
   "dependency_language",
   "system_prompt_leakage",
 ]);
@@ -891,7 +892,7 @@ export const outputSafetyReasonSchema = z.enum([
 const uniqueOutputSafetyReasonsSchema = z
   .array(outputSafetyReasonSchema)
   .min(1)
-  .max(7)
+  .max(8)
   .refine((reasons) => new Set(reasons).size === reasons.length, {
     message: "reasonCodes must be unique",
   });
@@ -1132,7 +1133,7 @@ export const riskCategorySchema = z.enum([
   "active_danger",
 ]);
 
-const RISK_CATEGORY_LEVELS: Record<
+export const RISK_CATEGORY_LEVELS: Record<
   z.infer<typeof riskCategorySchema>,
   ReadonlyArray<z.infer<typeof riskLevelSchema>>
 > = {
@@ -1313,7 +1314,7 @@ export const riskEvaluationReportSchema = z.object({
   { message: "level totals must equal total" },
 );
 
-export const RISK_CLASSIFIER_VERSION = "risk-classifier-deepseek-v2";
+export const RISK_CLASSIFIER_VERSION = "risk-classifier-deepseek-v3";
 export const RISK_FUSION_VERSION = "risk-fusion-max-v1";
 
 export const riskModelClassificationRequestSchema = z.object({
@@ -1531,7 +1532,7 @@ export const riskFusionResultSchema = z.object({
 });
 
 export const RELEASE_SAFETY_EVALUATION_DATASET_VERSION =
-  "release-safety-evaluation-2026-08-v4";
+  "release-safety-evaluation-2026-09-v7";
 
 export const releaseSafetyEvaluationTrackSchema = z.enum([
   "ordinary_and_real_action",
@@ -1824,6 +1825,8 @@ export const safetyEventOverrideReasonSchema = z.enum([
 
 const syntheticExcerptSchema = z.string().trim().min(8).max(280)
   .startsWith("虚构测试：");
+const syntheticRiskDispositionNoteSchema = z.string().trim().min(10).max(240)
+  .startsWith("虚构处置：");
 const syntheticReviewNoteSchema = z.string().trim().min(10).max(240)
   .startsWith("虚构复核：");
 
@@ -1905,6 +1908,111 @@ export const safetyEventResponseSchema = z.object({
   { message: "retention must end after creation", path: ["retentionUntil"] },
 );
 
+export const RISK_TICKET_SCHEMA_VERSION = "risk-ticket-2026-09-v1";
+
+export const riskNotificationChannelSchema = z.enum([
+  "in_app",
+  "off_site_backup",
+]);
+
+export const riskNotificationStatusSchema = z.enum([
+  "not_sent",
+  "attempted",
+  "delivered",
+  "viewed",
+  "acknowledged",
+  "failed",
+  "timed_out",
+]);
+
+export const riskTicketStatusSchema = z.enum([
+  "open",
+  "waiting_for_acknowledgement",
+  "escalated",
+  "acknowledged",
+  "resolved",
+  "closed",
+]);
+
+export const riskTicketCreateRequestSchema = z.object({
+  requestId: requestIdSchema,
+  synthetic: z.literal(true),
+  caseReference: safetyEventCreateRequestSchema.shape.caseReference,
+  level: z.enum(["L2", "L3"]),
+  primaryCategory: riskCategorySchema,
+  createdAt: z.iso.datetime(),
+}).strict().refine(
+  (value) => validRiskLevelCategory({ level: value.level, primaryCategory: value.primaryCategory }),
+  { message: "primaryCategory is not valid for level", path: ["primaryCategory"] },
+);
+
+export const riskNotificationPlanSchema = z.object({
+  channel: riskNotificationChannelSchema,
+  status: riskNotificationStatusSchema,
+  attempts: z.number().int().min(0).max(2),
+  deliveredAt: z.iso.datetime().nullable(),
+  viewedAt: z.iso.datetime().nullable(),
+  acknowledgedAt: z.iso.datetime().nullable(),
+  failedAt: z.iso.datetime().nullable(),
+  timedOutAt: z.iso.datetime().nullable(),
+}).strict();
+
+export const riskTicketEventActionSchema = z.enum([
+  "record_send_attempted",
+  "record_delivered",
+  "record_viewed",
+  "record_acknowledged",
+  "record_failed",
+  "record_timed_out",
+  "escalate_for_immediate_human_review",
+  "resolve",
+  "close",
+]);
+
+export const riskTicketEventSchema = z.object({
+  requestId: requestIdSchema,
+  action: riskTicketEventActionSchema,
+  channel: riskNotificationChannelSchema.optional(),
+  dispositionNote: syntheticRiskDispositionNoteSchema.optional(),
+  occurredAt: z.iso.datetime(),
+}).strict().superRefine((event, context) => {
+  const channelActions = new Set([
+    "record_send_attempted",
+    "record_delivered",
+    "record_viewed",
+    "record_acknowledged",
+    "record_failed",
+    "record_timed_out",
+  ]);
+  if (channelActions.has(event.action) && event.channel === undefined) {
+    context.addIssue({ code: "custom", message: "notification event requires a channel", path: ["channel"] });
+  }
+  if (!channelActions.has(event.action) && event.channel !== undefined) {
+    context.addIssue({ code: "custom", message: "non-notification event must not target a channel", path: ["channel"] });
+  }
+  if (event.action === "resolve" && event.dispositionNote === undefined) {
+    context.addIssue({ code: "custom", message: "resolution requires a disposition note", path: ["dispositionNote"] });
+  }
+  if (event.action !== "resolve" && event.dispositionNote !== undefined) {
+    context.addIssue({ code: "custom", message: "only resolve carries a disposition note", path: ["dispositionNote"] });
+  }
+});
+
+const syntheticDispositionNoteSchema = z.string().trim().min(10).max(240)
+  .startsWith("虚构处置：");
+
+export const riskTicketSnapshotSchema = z.object({
+  schemaVersion: z.literal(RISK_TICKET_SCHEMA_VERSION),
+  synthetic: z.literal(true),
+  caseReference: riskTicketCreateRequestSchema.shape.caseReference,
+  level: z.enum(["L2", "L3"]),
+  primaryCategory: riskCategorySchema,
+  status: riskTicketStatusSchema,
+  resolution: syntheticDispositionNoteSchema.nullable(),
+  notifications: z.array(riskNotificationPlanSchema).length(2),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+}).strict();
 export type InternalAiGenerationRequest = z.infer<
   typeof internalAiGenerationRequestSchema
 >;
@@ -2002,3 +2110,10 @@ export type SafetyEventCreateRequest = z.infer<typeof safetyEventCreateRequestSc
 export type SafetyEventOverrideRequest = z.infer<typeof safetyEventOverrideRequestSchema>;
 export type SafetyEventOverrideRecord = z.infer<typeof safetyEventOverrideRecordSchema>;
 export type SafetyEventResponse = z.infer<typeof safetyEventResponseSchema>;
+export type RiskTicketCreateRequest = z.infer<typeof riskTicketCreateRequestSchema>;
+export type RiskTicketSnapshot = z.infer<typeof riskTicketSnapshotSchema>;
+export type RiskTicketEvent = z.infer<typeof riskTicketEventSchema>;
+export type RiskNotificationChannel = z.infer<typeof riskNotificationChannelSchema>;
+export type RiskNotificationPlan = z.infer<typeof riskNotificationPlanSchema>;
+export type RiskTicketStatus = z.infer<typeof riskTicketStatusSchema>;
+export type RiskNotificationStatus = z.infer<typeof riskNotificationStatusSchema>;

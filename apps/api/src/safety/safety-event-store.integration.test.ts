@@ -31,7 +31,7 @@ const classification: RiskFusionResult = {
   versions: {
     policyVersion: "risk-policy-2026-08-v1",
         rulesVersion: "risk-rules-2026-08-v3",
-    classifierVersion: "risk-classifier-deepseek-v2",
+    classifierVersion: "risk-classifier-deepseek-v3",
     fusionVersion: "risk-fusion-max-v1",
   },
 };

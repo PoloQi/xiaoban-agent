@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  RISK_CATEGORY_LEVELS,
   RISK_CLASSIFIER_VERSION,
   riskModelCandidateSchema,
   riskModelClassificationRequestSchema,
@@ -129,6 +130,10 @@ function structureFailure(
   };
 }
 
+const CATEGORY_LEVEL_MAPPING = Object.entries(RISK_CATEGORY_LEVELS)
+  .map(([category, levels]) => `${category}:${levels.join(",")}`)
+  .join("；");
+
 function correctionPrompt(failure: RiskModelStructureFailure): string {
   const issueSummary = failure.issues
     .map((issue) => `${issue.type}:${issue.path}`)
@@ -136,6 +141,8 @@ function correctionPrompt(failure: RiskModelStructureFailure): string {
   return [
     CLASSIFIER_PROMPT,
     `上一次输出未通过结构校验（${failure.code}；${issueSummary}）。`,
+    `合法的primaryCategory与level组合只能是：${CATEGORY_LEVEL_MAPPING}；请据此选择与等级匹配的类别。`,
+    "reasonCodes必须是一个数组，包含1到4个互不重复的小写英文下划线字符串（例如[\"repeated_threat\"]），不能是字符串、数字或对象。",
     "请基于同一合成情境重新独立分类，只返回符合指定字段和枚举的JSON对象，不要复述上一次输出。",
   ].join("\n");
 }

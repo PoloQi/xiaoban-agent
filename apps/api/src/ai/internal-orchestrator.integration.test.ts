@@ -139,7 +139,7 @@ describe("phase 4A.2.4 internal orchestration", () => {
         pipelineVersion: "internal-ai-pipeline-v1",
         generationControl: { state: "running", source: "persisted" },
         retrievalPolicyVersion: "reviewed-content-retrieval-v1",
-        outputPolicyVersion: "output-safety-2026-08-v1",
+        outputPolicyVersion: "output-safety-2026-09-v3",
       },
     });
     const residual = await database.selectFrom("content_items")

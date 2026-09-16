@@ -50,6 +50,10 @@ import {
   safetyEventCreateRequestSchema,
   safetyEventOverrideRequestSchema,
   safetyEventResponseSchema,
+  RISK_TICKET_SCHEMA_VERSION,
+  riskTicketCreateRequestSchema,
+  riskTicketEventSchema,
+  riskTicketSnapshotSchema,
   reviewedContentRetrievalRequestSchema,
   reviewedContentRetrievalResultSchema,
   CHILD_TRUSTED_ADULTS_SCHEMA_VERSION,
@@ -63,7 +67,7 @@ import {
 } from "./local-test-account.js";
 
 const validReleaseSafetyEvaluationManifest = {
-  datasetVersion: "release-safety-evaluation-2026-08-v4",
+  datasetVersion: "release-safety-evaluation-2026-09-v7",
   syntheticOnly: true,
   existingDevelopmentSeeds: {
     datasetVersion: "risk-seed-2026-08-v1",
@@ -108,11 +112,11 @@ const validReleaseSafetyEvaluationManifest = {
     promptVersion: "internal-companion-v1",
     inputPolicyVersion: "input-deidentification-2026-08-v1",
     retrievalPolicyVersion: "reviewed-content-retrieval-v1",
-    outputPolicyVersion: "output-safety-2026-08-v1",
+    outputPolicyVersion: "output-safety-2026-09-v3",
     generationControlSchemaVersion: "generation-control-2026-08-v1",
     riskPolicyVersion: "risk-policy-2026-08-v1",
     riskRulesVersion: "risk-rules-2026-08-v3",
-    classifierVersion: "risk-classifier-deepseek-v2",
+    classifierVersion: "risk-classifier-deepseek-v3",
     fusionVersion: "risk-fusion-max-v1",
   },
   professionalReview: { required: true, status: "pending" },
@@ -326,7 +330,7 @@ describe("releaseSafetyEvaluationManifestSchema", () => {
 
 describe("releaseSafetyEvaluationCaseSchema", () => {
   const base = {
-    datasetVersion: "release-safety-evaluation-2026-08-v4",
+    datasetVersion: "release-safety-evaluation-2026-09-v7",
     synthetic: true,
     ageBand: "9_11",
     turns: ["虚构评测：最近几天总觉得自己做什么都不够好。"],
@@ -1221,7 +1225,7 @@ describe("phase 4A.2.3 output safety contracts", () => {
       .toBe(true);
     expect(internalAiOutputAuditResultSchema.safeParse({
       decision: "approve",
-      policyVersion: "output-safety-2026-08-v1",
+      policyVersion: "output-safety-2026-09-v3",
       candidate: generation.candidate,
     }).success).toBe(true);
   });
@@ -1229,14 +1233,14 @@ describe("phase 4A.2.3 output safety contracts", () => {
   it("accepts a reason-only static fallback and rejects raw model fields", () => {
     expect(internalAiOutputAuditResultSchema.safeParse({
       decision: "fallback",
-      policyVersion: "output-safety-2026-08-v1",
+      policyVersion: "output-safety-2026-09-v3",
       reply: "我现在不能安全生成新的回答。你可以先查看这些经过审核的内容，或稍后再试。",
       contentSlugs: ["synthetic-screen-break"],
       reasonCodes: ["dependency_language"],
     }).success).toBe(true);
     expect(internalAiOutputAuditResultSchema.safeParse({
       decision: "fallback",
-      policyVersion: "output-safety-2026-08-v1",
+      policyVersion: "output-safety-2026-09-v3",
       reply: "安全降级。",
       contentSlugs: [],
       reasonCodes: ["system_prompt_leakage"],
@@ -1257,7 +1261,7 @@ describe("phase 4A.2.4 internal orchestration contracts", () => {
     },
     inputPolicyVersion: "input-deidentification-2026-08-v1",
     retrievalPolicyVersion: "reviewed-content-retrieval-v1",
-    outputPolicyVersion: "output-safety-2026-08-v1",
+    outputPolicyVersion: "output-safety-2026-09-v3",
     promptVersion: "internal-companion-v1",
     model: {
       provider: "deepseek",
@@ -1722,7 +1726,7 @@ describe("phase 5C model risk classification and fusion contracts", () => {
     trace: {
       provider: "deepseek",
       model: "deepseek-v4-pro",
-      classifierVersion: "risk-classifier-deepseek-v2",
+      classifierVersion: "risk-classifier-deepseek-v3",
       durationMs: 120,
       usage: { inputTokens: 30, outputTokens: 12, totalTokens: 42 },
       structure: {
@@ -1788,7 +1792,7 @@ describe("phase 5C model risk classification and fusion contracts", () => {
       versions: {
         policyVersion: "risk-policy-2026-08-v1",
         rulesVersion: "risk-rules-2026-08-v3",
-        classifierVersion: "risk-classifier-deepseek-v2",
+        classifierVersion: "risk-classifier-deepseek-v3",
         fusionVersion: "risk-fusion-max-v1",
       },
     }).success).toBe(true);
@@ -1808,7 +1812,7 @@ describe("phase 5C model risk classification and fusion contracts", () => {
       versions: {
         policyVersion: "risk-policy-2026-08-v1",
         rulesVersion: "risk-rules-2026-08-v3",
-        classifierVersion: "risk-classifier-deepseek-v2",
+        classifierVersion: "risk-classifier-deepseek-v3",
         fusionVersion: "risk-fusion-max-v1",
       },
     }).success).toBe(true);
@@ -1825,7 +1829,7 @@ describe("phase 5C model risk classification and fusion contracts", () => {
       versions: {
         policyVersion: "risk-policy-2026-08-v1",
         rulesVersion: "risk-rules-2026-08-v3",
-        classifierVersion: "risk-classifier-deepseek-v2",
+        classifierVersion: "risk-classifier-deepseek-v3",
         fusionVersion: "risk-fusion-max-v1",
       },
     }).success).toBe(false);
@@ -1846,7 +1850,7 @@ describe("phase 5D synthetic safety event contracts", () => {
     versions: {
       policyVersion: "risk-policy-2026-08-v1",
       rulesVersion: "risk-rules-2026-08-v3",
-      classifierVersion: "risk-classifier-deepseek-v2",
+      classifierVersion: "risk-classifier-deepseek-v3",
       fusionVersion: "risk-fusion-max-v1",
     },
   } as const;
@@ -1938,6 +1942,83 @@ describe("phase 5D synthetic safety event contracts", () => {
   });
 });
 
+describe("phase 6 synthetic risk ticket contracts", () => {
+  const baseCreate = {
+    requestId: "019c2b71-1001-4001-8001-000000000001",
+    synthetic: true,
+    caseReference: "synthetic-risk-stage-six-l2",
+    level: "L2",
+    primaryCategory: "bullying",
+    createdAt: "2026-09-16T11:12:00.000Z",
+  } as const;
+
+  it("accepts only synthetic L2/L3 ticket requests with a valid level-category pair", () => {
+    expect(riskTicketCreateRequestSchema.safeParse(baseCreate).success).toBe(true);
+    expect(riskTicketCreateRequestSchema.safeParse({ ...baseCreate, level: "L3", primaryCategory: "active_danger" }).success).toBe(true);
+    expect(riskTicketCreateRequestSchema.safeParse({ ...baseCreate, synthetic: false }).success).toBe(false);
+    expect(riskTicketCreateRequestSchema.safeParse({ ...baseCreate, level: "L0", primaryCategory: "ordinary" }).success).toBe(false);
+    expect(riskTicketCreateRequestSchema.safeParse({ ...baseCreate, level: "L1", primaryCategory: "persistent_distress" }).success).toBe(false);
+    expect(riskTicketCreateRequestSchema.safeParse({ ...baseCreate, level: "L3", primaryCategory: "bullying" }).success).toBe(false);
+    expect(riskTicketCreateRequestSchema.safeParse({ ...baseCreate, rawConversation: "不得进入工单" }).success).toBe(false);
+  });
+
+  it("requires the initial snapshot to have two not-sent notification plans and no resolution", () => {
+    expect(riskTicketSnapshotSchema.safeParse({
+      schemaVersion: RISK_TICKET_SCHEMA_VERSION,
+      synthetic: true,
+      caseReference: "synthetic-risk-stage-six-l2",
+      level: "L2",
+      primaryCategory: "bullying",
+      status: "open",
+      resolution: null,
+      notifications: [
+        { channel: "in_app", status: "not_sent", attempts: 0, deliveredAt: null, viewedAt: null, acknowledgedAt: null, failedAt: null, timedOutAt: null },
+        { channel: "off_site_backup", status: "not_sent", attempts: 0, deliveredAt: null, viewedAt: null, acknowledgedAt: null, failedAt: null, timedOutAt: null },
+      ],
+      createdAt: "2026-09-16T11:12:00.000Z",
+      updatedAt: "2026-09-16T11:12:00.000Z",
+    }).success).toBe(true);
+    const invalid = {
+      schemaVersion: RISK_TICKET_SCHEMA_VERSION,
+      synthetic: true,
+      caseReference: "synthetic-risk-stage-six-l2",
+      level: "L2",
+      primaryCategory: "bullying",
+      status: "open",
+      resolution: null,
+      notifications: [{ channel: "in_app", status: "not_sent", attempts: 0, deliveredAt: null, viewedAt: null, acknowledgedAt: null, failedAt: null, timedOutAt: null }],
+      createdAt: "2026-09-16T11:12:00.000Z",
+      updatedAt: "2026-09-16T11:12:00.000Z",
+    };
+    expect(riskTicketSnapshotSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("bounds notification events and requires a synthetic disposition note only for resolve", () => {
+    expect(riskTicketEventSchema.safeParse({
+      requestId: "019c2b71-1002-4002-8002-000000000001",
+      action: "record_delivered",
+      channel: "in_app",
+      occurredAt: "2026-09-16T11:13:00.000Z",
+    }).success).toBe(true);
+    expect(riskTicketEventSchema.safeParse({
+      requestId: "019c2b71-1002-4002-8002-000000000002",
+      action: "resolve",
+      occurredAt: "2026-09-16T11:14:00.000Z",
+    }).success).toBe(false);
+    expect(riskTicketEventSchema.safeParse({
+      requestId: "019c2b71-1002-4002-8002-000000000003",
+      action: "resolve",
+      dispositionNote: "虚构处置：已由值守成人按合成应急流程确认安全。",
+      occurredAt: "2026-09-16T11:14:00.000Z",
+    }).success).toBe(true);
+    expect(riskTicketEventSchema.safeParse({
+      requestId: "019c2b71-1002-4002-8002-000000000004",
+      action: "record_delivered",
+      channel: "sms",
+      occurredAt: "2026-09-16T11:15:00.000Z",
+    }).success).toBe(false);
+  });
+});
 describe("child trusted adult contracts", () => {
   const validResponse = {
     schemaVersion: CHILD_TRUSTED_ADULTS_SCHEMA_VERSION,

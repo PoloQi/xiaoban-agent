@@ -24,7 +24,7 @@ describe("MySQL integration", () => {
         AND table_name NOT IN ('kysely_migration', 'kysely_migration_lock')
     `.execute(database);
 
-    expect(Number(result.rows[0]?.businessTableCount)).toBe(23);
+    expect(Number(result.rows[0]?.businessTableCount)).toBe(27);
   });
 
   it("reports readiness when the database is available", async () => {

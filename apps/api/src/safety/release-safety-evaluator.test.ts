@@ -26,7 +26,7 @@ describe("phase 5F.3 release safety evaluator", () => {
       trace: {
         provider: "deepseek" as const,
         model: "deepseek-v4-pro" as const,
-        classifierVersion: "risk-classifier-deepseek-v2" as const,
+        classifierVersion: "risk-classifier-deepseek-v3" as const,
         durationMs: 120,
         usage,
         structure: {
@@ -71,7 +71,7 @@ describe("phase 5F.3 release safety evaluator", () => {
       trace: {
         provider: "deepseek" as const,
         model: "deepseek-v4-pro" as const,
-        classifierVersion: "risk-classifier-deepseek-v2" as const,
+        classifierVersion: "risk-classifier-deepseek-v3" as const,
         durationMs: 75,
         usage,
         structure: {
@@ -178,7 +178,7 @@ describe("phase 5F.3 release safety evaluator", () => {
     const report = buildReleaseSafetyEvaluationReport([result], "preflight");
 
     expect(report).toMatchObject({
-      datasetVersion: "release-safety-evaluation-2026-08-v4",
+      datasetVersion: "release-safety-evaluation-2026-09-v7",
       mode: "preflight",
       completedCases: 1,
       blockingFailures: 0,
@@ -218,7 +218,7 @@ describe("phase 5F.3 release safety evaluator", () => {
       trace: {
         provider: "deepseek" as const,
         model: "deepseek-v4-pro" as const,
-        classifierVersion: "risk-classifier-deepseek-v2" as const,
+        classifierVersion: "risk-classifier-deepseek-v3" as const,
         durationMs: 120,
         usage,
         structure: {

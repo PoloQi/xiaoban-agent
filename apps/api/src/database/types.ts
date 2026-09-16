@@ -8,6 +8,9 @@ import type {
   GenerationControlReason,
   GenerationControlState,
   RiskFusionResult,
+  RiskNotificationChannel,
+  RiskNotificationStatus,
+  RiskTicketStatus,
   TrustedAdultChannel,
   TrustedAdultReachability,
   TrustedAdultRelationship,
@@ -181,6 +184,72 @@ export interface ContentCommandsTable {
   created_at: Timestamp;
 }
 
+export interface RiskTicketsTable {
+  id: string;
+  request_id: string;
+  request_hash: string;
+  synthetic: 1;
+  case_reference: string;
+  risk_level: "L2" | "L3";
+  primary_category: string;
+  status: RiskTicketStatus;
+  resolution: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface RiskTicketNotificationOutboxTable {
+  id: string;
+  ticket_id: string;
+  channel: RiskNotificationChannel;
+  status: RiskNotificationStatus;
+  attempts: number;
+  lease_owner_id: string | null;
+  leased_at: NullableTimestamp;
+  lease_expires_at: NullableTimestamp;
+  lease_count: number;
+  delivered_at: NullableTimestamp;
+  viewed_at: NullableTimestamp;
+  acknowledged_at: NullableTimestamp;
+  failed_at: NullableTimestamp;
+  timed_out_at: NullableTimestamp;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface RiskTicketOutboxClaimsTable {
+  id: string;
+  outbox_id: string;
+  ticket_id: string;
+  claim_request_id: string;
+  worker_id: string;
+  lease_token: string;
+  leased_at: Timestamp;
+  lease_expires_at: Timestamp;
+  created_at: Timestamp;
+}
+
+export interface RiskTicketEventsTable {
+  id: string;
+  ticket_id: string;
+  request_id: string;
+  request_hash: string;
+  action:
+    | "record_send_attempted"
+    | "record_delivered"
+    | "record_viewed"
+    | "record_acknowledged"
+    | "record_failed"
+    | "record_timed_out"
+    | "escalate_for_immediate_human_review"
+    | "resolve"
+    | "close";
+  channel: RiskNotificationChannel | null;
+  disposition_note: string | null;
+  occurred_at: Timestamp;
+  created_at: Timestamp;
+}
+
 export interface SafetyAccessGrantsTable {
   id: string;
   actor_id: string;
@@ -322,6 +391,10 @@ export interface DatabaseSchema {
   generation_controls: GenerationControlsTable;
   growth_attempts: GrowthAttemptsTable;
   pilot_invitations: PilotInvitationsTable;
+  risk_ticket_events: RiskTicketEventsTable;
+  risk_ticket_notification_outbox: RiskTicketNotificationOutboxTable;
+  risk_ticket_outbox_claims: RiskTicketOutboxClaimsTable;
+  risk_tickets: RiskTicketsTable;
   policy_versions: PolicyVersionsTable;
   safety_access_grants: SafetyAccessGrantsTable;
   safety_event_overrides: SafetyEventOverridesTable;

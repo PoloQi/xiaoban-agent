@@ -172,7 +172,7 @@ const internalTrace = {
   },
   inputPolicyVersion: "input-deidentification-2026-08-v1",
   retrievalPolicyVersion: "reviewed-content-retrieval-v1",
-  outputPolicyVersion: "output-safety-2026-08-v1",
+  outputPolicyVersion: "output-safety-2026-09-v3",
   promptVersion: "internal-companion-v1",
   model: {
     provider: "deepseek",

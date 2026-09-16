@@ -287,6 +287,34 @@
 - 创建、读取、覆盖、幂等重放和到期清理写入通用审计区，审计元数据不含必要摘录或复核正文；
 - 内部到期清理只选择已到期的合成事件，级联删除事件覆盖记录并保留`safety.event.retention_purged`审计；没有计划任务、生产身份映射、真实数据、通知、页面或儿童入口。
 
+阶段6A.1合成风险工单与通知计划（离线前置契约）：
+
+- `packages/contracts`定义`risk-ticket-2026-09-v1`：仅接受`synthetic=true`的L2/L3建单请求，快照固定包含`in_app`和`off_site_backup`两个通知计划，状态枚举覆盖`not_sent`、`attempted`、`delivered`、`viewed`、`acknowledged`、`failed`和`timed_out`；
+- `apps/api/src/tickets/risk-ticket-state-machine.ts`是纯内存状态机，按尝试→送达→查看→确认记录通道回执，未查看不得确认；单通道确认时工单为`waiting_for_acknowledgement`，双通道确认后为`acknowledged`，失败/超时可进入`escalated`；只有已确认或已升级工单可携带以“虚构处置：”开头的说明进入`resolved`，解决后才能`closed`；
+阶段6A.2 MySQL InnoDB持久化（未发送outbox）：
+
+- 016迁移新增`risk_tickets`、`risk_ticket_notification_outbox`和`risk_ticket_events`三张InnoDB表；主表强制`synthetic=TRUE`且只接受L2/L3，outbox对每张工单固定`in_app`和`off_site_backup`两行，事件表通过触发器禁止UPDATE/DELETE；
+- `apps/api/src/tickets/risk-ticket-store.ts`在短事务内完成幂等建单、case冲突检测、事件请求哈希冲突检测、工单/outbox行锁定、复用6A.1状态机推进、事件追加和outbox更新；读取结果重新经共享快照契约校验；
+阶段6A.3 outbox租约领取（只领取，不发送）：
+
+- 017迁移为`risk_ticket_notification_outbox`增加`lease_owner_id`、`leased_at`、`lease_expires_at`和`lease_count`，并新增追加式`risk_ticket_outbox_claims`；claim表记录claim request、worker、lease token和租约起止时间，触发器禁止UPDATE/DELETE；
+- `RiskOutboxClaimWorker.claimNext()`在短事务中按`status='not_sent'`且无有效租约筛选，按创建时间/通道/id稳定排序，通过`FOR UPDATE SKIP LOCKED LIMIT 1`领取一行，写入claim和租约；相同claim request幂等重放，异worker载荷冲突，过期租约可被重新领取；
+- 领取演练不改变通知`status`、不增加发送`attempts`、不写delivered/viewed/acknowledged/failed/timed_out，也没有API、常驻worker、重试退避、短信/邮件/微信/推送适配器或真实回执。
+
+阶段6A.4本地模拟通知尝试（无网络，仅`attempted`）：
+
+- `LocalSyntheticNotificationAdapter`只校验并接受合成ticket/outbox/claim标识和两个批准通道（`in_app`、`off_site_backup`），拒绝额外联系方式字段；返回固定为`outcome=locally_attempted`、`networkCallMade=false`、`delivered=false`的本地收据；
+- `RiskNotificationAttemptRunner.attemptNext()`在一个短事务中复用6A.3领取逻辑、调用本地适配器，然后追加`record_send_attempted`事件并把对应outbox更新为`status=attempted`、`attempts=1`；claim请求和事件请求共用requestId，因此同请求重放幂等，异worker冲突；
+- 该切片没有网络I/O、短信/邮件/微信/推送适配器、真实发送、送达/查看/确认回执、退避重试或常驻worker；`attempted`只证明本地合成适配器完成一次安全演练，不表示监护人已收到。未来模拟成功回执、失败退避、通知故障降级和真实渠道必须分别作为独立切片评审。
+
+阶段6A.5本地失败、退避与超时升级（无网络）：
+
+- LocalSyntheticNotificationAdapter新增确定性local_simulated_failure结果，仍只接受合成标识与in_app、off_site_backup两个批准通道，并固定返回
+etworkCallMade=false、delivered=false；
+- RiskNotificationAttemptRunner在同短事务内记录ecord_send_attempted后，对首次失败追加ecord_failed（attempts=1）并释放租约；claim worker只在ailed_at + 1000ms退避门槛后重新领取失败行；
+- 第二次本地尝试仍失败时追加ecord_timed_out（attempts=2）并把工单推进为scalated，之后不再领取该通道；失败/超时事件使用确定性派生requestId支持重放，事件和claim仍为追加式不可改删；
+- 本切片不新增迁移、不启动调度器或常驻worker、不产生delivered/viewed/acknowledged、不调用外部渠道，也不代表真实故障告警或值守链路已完成。
+
 阶段5E全局生成控制与内部固定风险预览：
 
 - 007迁移新增单例`generation_controls`和追加式`generation_control_changes`；全局初始状态固定为`stopped`，变更记录由数据库触发器禁止更新和删除；已有变更历史时007拒绝向下回滚，避免静默丢失控制证据；
@@ -364,3 +392,4 @@ API当前使用以下非秘密启动配置：
 - 拆分微服务；
 - 新增语音、定位、摄像头或设备数据；
 - 改变会话和风险数据保留策略。
+

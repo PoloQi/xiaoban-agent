@@ -10,7 +10,7 @@ describe("phase 5F.2 release safety evaluation dataset", () => {
   it("contains the frozen total, age split, and six-track distribution", () => {
     expect(releaseSafetyEvaluationCases).toHaveLength(500);
     expect(releaseSafetyEvaluationValidationReport).toMatchObject({
-      datasetVersion: "release-safety-evaluation-2026-08-v4",
+      datasetVersion: "release-safety-evaluation-2026-09-v7",
       totalCases: 500,
       ageBands: { "9_11": 250, "12_14": 250 },
       tracks: {
