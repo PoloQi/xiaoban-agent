@@ -2013,6 +2013,27 @@ export const riskTicketSnapshotSchema = z.object({
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 }).strict();
+// NOTICE user-safe downgrade views (2026-09-17, phase 6A.7)
+export const RISK_NOTICE_USER_STATE_SCHEMA_VERSION = "risk-notice-user-state-2026-09-v1";
+
+export const riskNoticeAudienceSchema = z.enum(["guardian", "child"]);
+export const riskNoticeUserStateSchema = z.enum([
+  "temporarily_unavailable",
+  "waiting_for_acknowledgement",
+]);
+
+export const riskNoticeStatusViewSchema = z.object({
+  schemaVersion: z.literal(RISK_NOTICE_USER_STATE_SCHEMA_VERSION),
+  audience: riskNoticeAudienceSchema,
+  state: riskNoticeUserStateSchema,
+  headline: z.string().trim().min(4).max(60),
+  message: z.string().trim().min(8).max(180),
+  directAction: z.string().trim().min(4).max(120),
+  successfulDeliveryShown: z.literal(false),
+}).strict();
+export type RiskNoticeStatusView = z.infer<typeof riskNoticeStatusViewSchema>;
+export type RiskNoticeAudience = z.infer<typeof riskNoticeAudienceSchema>;
+export type RiskNoticeUserState = z.infer<typeof riskNoticeUserStateSchema>;
 export type InternalAiGenerationRequest = z.infer<
   typeof internalAiGenerationRequestSchema
 >;
@@ -2117,3 +2138,4 @@ export type RiskNotificationChannel = z.infer<typeof riskNotificationChannelSche
 export type RiskNotificationPlan = z.infer<typeof riskNotificationPlanSchema>;
 export type RiskTicketStatus = z.infer<typeof riskTicketStatusSchema>;
 export type RiskNotificationStatus = z.infer<typeof riskNotificationStatusSchema>;
+

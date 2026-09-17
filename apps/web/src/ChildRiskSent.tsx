@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import "./child-risk-sent.css";
+import { NoticeStatus } from "./notice-status";
 
 interface ChildRiskSentProps {
   onBackHome: () => void;
@@ -30,6 +31,8 @@ export function ChildRiskSent({ onBackHome, onOpenAdultPreview }: ChildRiskSentP
         <span><RiskSentIcon name="check" /></span>
         <p><strong>演示通知已生成</strong><small>原型保留 · 未真实发送</small></p>
       </header>
+
+      <NoticeStatus variant="waiting" audience="child" />
 
       <section className="risk-sent-hero" aria-labelledby="risk-sent-title">
         <span className="risk-sent-badge"><RiskSentIcon name="people" /></span>
@@ -77,3 +80,4 @@ export function ChildRiskSent({ onBackHome, onOpenAdultPreview }: ChildRiskSentP
     </main>
   );
 }
+

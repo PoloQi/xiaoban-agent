@@ -5,6 +5,7 @@ import type { GuardianDashboardResponse } from "@xiaoban/contracts";
 import { ApiError } from "./api";
 import { getGuardianDashboard } from "./guardian-dashboard";
 import "./guardian-dashboard.css";
+import { NoticeStatus } from "./notice-status";
 
 type AdultTab = "overview" | "report" | "alerts" | "settings";
 type AdultAlert = GuardianDashboardResponse["alerts"][number];
@@ -158,6 +159,7 @@ function AlertDetail({ alert, onBack }: { alert: AdultAlert; onBack: () => void 
       <article className="adult-risk-detail">
         <header><div><p>RISK DETAIL · SYNTHETIC</p><span className="adult-risk-badge">{alert.level}</span><h1>{alert.title}</h1><em>无真实发生时间 · 本地合成预览</em></div></header>
         <p className="adult-risk-summary">{alert.summary}</p>
+        <NoticeStatus variant="waiting" audience="guardian" />
         <section><p>ACTION GUIDE</p><h2>可以先做这三件事</h2><ol>{alert.steps.map((step, index) => <li key={step}><span>0{index + 1}</span><strong>{step}</strong></li>)}</ol></section>
         <aside><strong>当前能力边界</strong><p>这个页面没有向任何人发送通知，也不支持“确认已读”或“正在处理”回执。按钮会在真实通知闭环接入后再开放。</p></aside>
         <button className="adult-risk-disabled" type="button" disabled>确认回执尚未接入</button>

@@ -325,6 +325,12 @@ ecord_timed_out（attempts=2）并把工单推进为scalated，之后不再领�
 - 单通道确认后工单为`waiting_for_acknowledgement`，只有in_app和off_site_backup均`acknowledged`才聚合为`acknowledged`；通道已确认后的新requestId安全空转返回`recorded:false/reason:channel_already_acknowledged`；`not_sent/failed/timed_out/acknowledged`通道拒绝或空转成功回执，未attempted不得delivered、未viewed不得acknowledged；
 - 本切片不新增迁移或业务表、不注册API、不启动调度器或常驻worker、不接短信/邮件/微信/推送、不存联系方式，delivered/viewed/acknowledged仅为本地合成状态，不代表真实监护人收到、查看或确认。
 
+阶段6A.7通知故障用户侧降级（无网络，仅安全视图）：
+
+- `buildRiskNoticeStatusView()`只读取本地合成工单状态与两个既有通道状态；`open`、`waiting_for_acknowledgement`输出等待确认，`failed`、`timed_out`或`escalated`输出暂时不可送达，`acknowledged/resolved/closed`不显示降级提示；
+- 输出契约固定`successfulDeliveryShown:false`和用户可理解的中性文案，不包含内部异常、供应商原文、渠道实现细节、requestId、密钥或重试参数；儿童动作引导为当面告诉身边可信任大人，成人动作引导为稍后查看或直接当面联系；
+- Web端新增独立`notice-status.tsx/css`，仅在儿童risk-sent收尾页与成人合成风险详情最小挂载；不改变GuardianDashboard聚合接口，不伪装真实工单状态；本切片不新增API、迁移、外部依赖、真实发送或真实回执。
+
 阶段5E全局生成控制与内部固定风险预览：
 
 - 007迁移新增单例`generation_controls`和追加式`generation_control_changes`；全局初始状态固定为`stopped`，变更记录由数据库触发器禁止更新和删除；已有变更历史时007拒绝向下回滚，避免静默丢失控制证据；

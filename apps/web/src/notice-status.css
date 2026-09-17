@@ -1,0 +1,46 @@
+.notice-status {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 12px;
+  align-items: start;
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid rgb(176 122 27 / 28%);
+  border-radius: 16px;
+  background: #fbf0cf;
+  color: #70551f;
+}
+
+.notice-status svg {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notice-status strong,
+.notice-status p,
+.notice-status span {
+  display: block;
+}
+
+.notice-status strong {
+  font-family: "FZKai-Z03", "STKaiti", "KaiTi", serif;
+  font-size: 1rem;
+}
+
+.notice-status p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.notice-status span {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
