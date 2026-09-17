@@ -311,9 +311,19 @@
 
 - LocalSyntheticNotificationAdapter新增确定性local_simulated_failure结果，仍只接受合成标识与in_app、off_site_backup两个批准通道，并固定返回
 etworkCallMade=false、delivered=false；
-- RiskNotificationAttemptRunner在同短事务内记录ecord_send_attempted后，对首次失败追加ecord_failed（attempts=1）并释放租约；claim worker只在ailed_at + 1000ms退避门槛后重新领取失败行；
-- 第二次本地尝试仍失败时追加ecord_timed_out（attempts=2）并把工单推进为scalated，之后不再领取该通道；失败/超时事件使用确定性派生requestId支持重放，事件和claim仍为追加式不可改删；
+- RiskNotificationAttemptRunner在同短事务内记录
+ecord_send_attempted后，对首次失败追加
+ecord_failed（attempts=1）并释放租约；claim worker只在ailed_at + 1000ms退避门槛后重新领取失败行；
+- 第二次本地尝试仍失败时追加
+ecord_timed_out（attempts=2）并把工单推进为scalated，之后不再领取该通道；失败/超时事件使用确定性派生requestId支持重放，事件和claim仍为追加式不可改删；
 - 本切片不新增迁移、不启动调度器或常驻worker、不产生delivered/viewed/acknowledged、不调用外部渠道，也不代表真实故障告警或值守链路已完成。
+
+阶段6A.6本地模拟成功回执链与双通道确认聚合（无网络）：
+
+- 新增`RiskLocalReceiptRunner`（apps/api/src/tickets/risk-local-receipt-runner.ts），在短事务内读取合成工单快照，按通道当前状态推进单个成功回执：`attempted→record_delivered`、`delivered→record_viewed`、`viewed→record_acknowledged`，转换复用6A.1状态机和`RiskTicketStore.applyEvent`的行锁、事件哈希幂等与outbox更新；
+- 每个送达/查看/确认回执使用独立requestId，同requestId重放返回同一回执并标记`replayed:true`；结果固定`simulated:true`、`networkCallMade:false`；通道相互隔离，in_app回执不推进off_site_backup；
+- 单通道确认后工单为`waiting_for_acknowledgement`，只有in_app和off_site_backup均`acknowledged`才聚合为`acknowledged`；通道已确认后的新requestId安全空转返回`recorded:false/reason:channel_already_acknowledged`；`not_sent/failed/timed_out/acknowledged`通道拒绝或空转成功回执，未attempted不得delivered、未viewed不得acknowledged；
+- 本切片不新增迁移或业务表、不注册API、不启动调度器或常驻worker、不接短信/邮件/微信/推送、不存联系方式，delivered/viewed/acknowledged仅为本地合成状态，不代表真实监护人收到、查看或确认。
 
 阶段5E全局生成控制与内部固定风险预览：
 

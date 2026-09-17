@@ -80,7 +80,7 @@
 
 当前产品轨道的成人端只读切片不代表阶段6通知/工单已完成。成人聚合仅在监护会话、活跃同意和 verified 绑定同时有效时读取当周 `growth_attempts`；不得查询完整普通聊天、心情历史、联系人或其他 App 使用记录。未采集使用时长必须显示未知。本地风险详情只允许固定 `synthetic_preview`，并同时标记 `not_sent` 与 `acknowledgementStatus=unavailable`；确认按钮禁用，不得形成“已看到”“处理中”或送达回执。
 
-阶段6A.1—6A.4的合成风险工单和双通道通知计划只允许显式合成数据。站内提醒和站外备用计划初始必须为`not_sent`；未记录`attempted`不得显示送达，未记录`delivered`和`viewed`不得确认；单通道确认只能表示等待另一通道确认，不能显示全体已确认。6A.2仅把这些未发送计划和本地合成回执事件持久化到MySQL InnoDB；6A.3只允许worker领取`not_sent`任务并写租约/claim，领取后状态仍必须是`not_sent`、发送尝试次数仍必须为0；6A.4的`attempted`只能来自无网络本地合成适配器，且必须同时标记`networkCallMade=false`和`delivered=false`。6A.5允许在同一本地合成边界内确定性模拟失败：首次失败只能记为`failed/attempts=1`，经过1秒退避门槛后才可再次领取；第二次仍失败只能记为`timed_out/attempts=2`并把工单推进为`escalated`。失败、退避和超时均不得产生`delivered/viewed/acknowledged`，仍必须标记`networkCallMade=false`、`delivered=false`，且不代表真实渠道故障处理或已通知值守人员。没有真实发送、送达、查看、工单处置、人员值守或外部渠道，任何`failed`/`timed_out`/`escalated`也只是本地状态建模。
+阶段6A.1—6A.4的合成风险工单和双通道通知计划只允许显式合成数据。站内提醒和站外备用计划初始必须为`not_sent`；未记录`attempted`不得显示送达，未记录`delivered`和`viewed`不得确认；单通道确认只能表示等待另一通道确认，不能显示全体已确认。6A.2仅把这些未发送计划和本地合成回执事件持久化到MySQL InnoDB；6A.3只允许worker领取`not_sent`任务并写租约/claim，领取后状态仍必须是`not_sent`、发送尝试次数仍必须为0；6A.4的`attempted`只能来自无网络本地合成适配器，且必须同时标记`networkCallMade=false`和`delivered=false`。6A.5允许在同一本地合成边界内确定性模拟失败：首次失败只能记为`failed/attempts=1`，经过1秒退避门槛后才可再次领取；第二次仍失败只能记为`timed_out/attempts=2`并把工单推进为`escalated`。失败、退避和超时均不得产生`delivered/viewed/acknowledged`，仍必须标记`networkCallMade=false`、`delivered=false`，且不代表真实渠道故障处理或已通知值守人员。没有真实发送、送达、查看、工单处置、人员值守或外部渠道，任何`failed`/`timed_out`/`escalated`也只是本地状态建模。6A.6允许在同一无网络合成边界内由`RiskLocalReceiptRunner`按严格顺序记录成功回执：只有`attempted`通道可记`delivered`、只有`delivered`可记`viewed`、只有`viewed`可记`acknowledged`，每个回执独立requestId且同请求幂等重放；两通道相互隔离，一条通道的送达/查看/确认不得推进另一条。单通道确认只允许工单显示`waiting_for_acknowledgement`，in_app与off_site_backup双通道均`acknowledged`后才允许聚合为`acknowledged`；`not_sent/failed/timed_out`通道禁止补记成功回执。所有成功回执必须标记`simulated:true`、`networkCallMade:false`，不存储任何联系方式，不代表真实监护人已收到、查看或确认，也不改变“未回执不显示成功”的退出门槛。
 
 阶段5F风险分类器的结构纠正只允许用于显式合成评测和既定产品分类路径中的`RISK_MODEL_CONTENT_JSON_INVALID`或`RISK_MODEL_CANDIDATE_INVALID`，单次分类最多纠正一次。纠正请求不得携带上一轮模型原文或未知字段和值，只能使用固定问题类型和固定字段路径；首次失败必须保留。供应商JSON/包络、模型ID、网络、超时和其他错误不得借此重试。纠正后仍无效时必须失败关闭。发布报告分别统计首次结构合规率和纠正后结构可用率，不能用重试结果覆盖首次失败，也不能用结构指标抵消L2/L3或零容忍输出失败。
 
@@ -175,4 +175,5 @@
 - 截图、录屏和开发日志不得含真实个人信息；
 - 调试日志在提交前检查并移除敏感正文；
 - 任何真实试点数据接入必须有单独批准和环境隔离。
+
 

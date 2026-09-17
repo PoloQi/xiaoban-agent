@@ -23,3 +23,7 @@ coverage/
 
 # 脚本运行临时文件
 _tmp_*
+
+# 双Agent并行工作树
+.worktrees/
+
