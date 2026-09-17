@@ -226,7 +226,7 @@ export class RiskConsoleService {
       .forUpdate()
       .executeTakeFirst();
     if (ticket === undefined || ticket.child_id !== principal.childId) {
-      throw new PublicAppError("NOT_FOUND", 404);
+      throw new PublicAppError("FORBIDDEN", 403);
     }
     return ticket;
   }
@@ -241,7 +241,7 @@ export class RiskConsoleService {
       .where("id", "=", ticketId)
       .executeTakeFirst();
     if (ticket === undefined || ticket.child_id !== principal.childId) {
-      throw new PublicAppError("NOT_FOUND", 404);
+      throw new PublicAppError("FORBIDDEN", 403);
     }
     const store = new RiskTicketStore(transaction);
     const snapshot = await store.getTicket(ticketId);
@@ -289,16 +289,16 @@ export class RiskConsoleService {
 
   private async authenticate(token: string): Promise<GuardianPrincipal> {
     if (!/^[A-Za-z0-9_-]{43}$/u.test(token)) {
-      throw new PublicAppError("UNAUTHORIZED", 401);
+      throw new PublicAppError("FORBIDDEN", 403);
     }
     const session = await this.database.selectFrom("access_sessions")
       .select(["role", "subject_id as subjectId", "enrollment_id as enrollmentId", "revoked_at as revokedAt"])
       .where("token_hash", "=", hashSecret(token))
       .executeTakeFirst();
-    if (session === undefined) throw new PublicAppError("UNAUTHORIZED", 401);
+    if (session === undefined) throw new PublicAppError("FORBIDDEN", 403);
     if (session.role !== "guardian") throw new PublicAppError("FORBIDDEN", 403);
     if (session.revokedAt !== null || session.enrollmentId === null) {
-      throw new PublicAppError("UNAUTHORIZED", 401);
+      throw new PublicAppError("FORBIDDEN", 403);
     }
 
     const principal = await this.database.selectFrom("guardian_accounts as guardian")
@@ -323,7 +323,7 @@ export class RiskConsoleService {
       .whereRef("link.guardian_id", "=", "guardian.id")
       .executeTakeFirst();
 
-    if (principal === undefined) throw new PublicAppError("UNAUTHORIZED", 401);
+    if (principal === undefined) throw new PublicAppError("FORBIDDEN", 403);
     if (
       principal.guardianStatus !== "active"
       || principal.enrollmentStatus !== "active"

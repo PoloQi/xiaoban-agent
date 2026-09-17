@@ -261,7 +261,7 @@ describe("phase 6 risk console service (MySQL)", () => {
     });
   });
 
-  it("rejects child role, other-household guardian, and missing auth with 401/403/404", async () => {
+  it("rejects child role, other-household guardian, and missing auth with 403", async () => {
     const child = await localAccount.resumeSession();
     await inRollback(async (transaction) => {
       const service = new RiskConsoleService(transaction);
@@ -272,11 +272,11 @@ describe("phase 6 risk console service (MySQL)", () => {
       const other = await seedSecondHousehold(transaction);
       await expect(service.list(other.guardianToken)).resolves.toMatchObject({ tickets: [] });
       await expect(service.detail(other.guardianToken, ticketId))
-        .rejects.toMatchObject({ code: "NOT_FOUND", statusCode: 404 });
+        .rejects.toMatchObject({ code: "FORBIDDEN", statusCode: 403 });
       await expect(service.claim(other.guardianToken, ticketId, randomUUID()))
-        .rejects.toMatchObject({ code: "NOT_FOUND", statusCode: 404 });
+        .rejects.toMatchObject({ code: "FORBIDDEN", statusCode: 403 });
 
-      await expect(service.list("not-a-valid-token")).rejects.toMatchObject({ statusCode: 401 });
+      await expect(service.list("not-a-valid-token")).rejects.toMatchObject({ statusCode: 403 });
     });
   });
 });
