@@ -189,7 +189,7 @@
 
 ## 8. 阶段6：通知、成人端与风险工作台
 
-状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1完成合成风险工单契约与纯内存状态机，6A.2完成MySQL InnoDB持久化和未发送outbox，6A.3完成`FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4完成无网络本地模拟适配器与`attempted`状态，6A.5完成确定性本地失败、1秒退避门槛、二次失败超时升级演练，6A.6完成无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合；真实外部发送/真实回执/工作台仍未开始
+状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1完成合成风险工单契约与纯内存状态机，6A.2完成MySQL InnoDB持久化和未发送outbox，6A.3完成`FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4完成无网络本地模拟适配器与`attempted`状态，6A.5完成确定性本地失败、1秒退避门槛、二次失败超时升级演练，6A.6完成无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合，6A.7完成仅合成工单边界内的风险工作台API/UI；真实外部发送/真实回执、通知故障降级、SLA演练和数据权利仍未完成
 
 - 已验证成年人；
 - 站内和一种站外通知；
@@ -227,6 +227,12 @@
    - 能力：每个回执使用独立requestId幂等，同requestId重放返回同一回执并标记`replayed:true`，异载荷仍由事件哈希冲突拦截；通道隔离，一条通道的回执不推进另一通道；单通道确认时工单为`waiting_for_acknowledgement`，双通道均确认才聚合为`acknowledged`；通道已确认后的新请求安全空转（`recorded:false/channel_already_acknowledged`）；`not_sent/failed/timed_out`通道拒绝成功回执，继续复用6A.1顺序门槛（未attempted不得delivered、未delivered不得viewed、未viewed不得acknowledged）；事件仍追加式不可改删；
    - 验证：6A.6聚焦集成4/4通过，6A.5尝试链回归4/4通过；全量MySQL集成20文件81/81通过；契约78/78、API离线119/119、三工作区typecheck、API生产构建通过；
    - 未完成：真实渠道适配与真实回执、退避调度器、通知故障用户侧降级、SLA桌面演练、风险工作台API/UI、数据权利请求和阶段6总体验收。
+
+7. [x] 阶段6A.7（Agent A风险工作台，2026-09-17）：在仅合成工单、无真实通知边界内完成风险工作台契约、019迁移、服务/HTTP API与成人端UI；
+   - 边界：只允许已验证成年监护人访问本户工单；无凭证/儿童/他户监护人统一403；不返回普通完整聊天、供应商原文、秘密、提示词、推理、危险候选或联系方式；不提供重发，不接短信/邮件/微信/推送，不新增真实个人信息；
+   - 能力：工单列表/详情、接单、追加“虚构处置：”处置记录、在acknowledged/escalated后解决、resolved后关闭；通知/回执只读且固定`synthetic:true`、`networkCallMade:false`；接单与备注表append-only，触发器拒绝UPDATE/DELETE；
+   - 验证：全量MySQL集成22文件88/88、契约82/82、API离线19文件119/119、三工作区typecheck、API/Web生产构建通过；
+   - 未完成：真实渠道与真实回执、退避调度器、通知故障用户侧降级、SLA桌面演练、数据权利请求、生产造单写入child_id和阶段6总体验收。
 
 退出门槛：
 

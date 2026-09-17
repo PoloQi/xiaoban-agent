@@ -325,6 +325,15 @@ ecord_timed_out（attempts=2）并把工单推进为scalated，之后不再领�
 - 单通道确认后工单为`waiting_for_acknowledgement`，只有in_app和off_site_backup均`acknowledged`才聚合为`acknowledged`；通道已确认后的新requestId安全空转返回`recorded:false/reason:channel_already_acknowledged`；`not_sent/failed/timed_out/acknowledged`通道拒绝或空转成功回执，未attempted不得delivered、未viewed不得acknowledged；
 - 本切片不新增迁移或业务表、不注册API、不启动调度器或常驻worker、不接短信/邮件/微信/推送、不存联系方式，delivered/viewed/acknowledged仅为本地合成状态，不代表真实监护人收到、查看或确认。
 
+阶段6A.7风险工作台（synthetic-only workbench，2026-09-17）：
+
+- 共享契约版本为`risk-console-2026-09-v1`；列表/详情只暴露工单ID、案例引用、L2/L3、类别、状态、责任人状态、时间、通知通道状态/尝试次数、追加式处置记录和服务端权限位，不暴露普通完整聊天、必要摘录之外的正文、供应商原文、秘密、提示词、推理、危险候选或联系方式。
+- 019迁移仅给`risk_tickets`追加`child_id`、`claimed_by_guardian_id`和`claimed_at`可空列，并新增append-only表`risk_ticket_console_notes`；接单和处置说明进入备注表，UPDATE/DELETE由触发器拒绝；解决/关闭继续复用`RiskTicketStore`与6A.1状态机，不另写状态转换。
+- `RiskConsoleService`要求活跃guardian会话、活跃enrollment/consent、verified且未停用的监护关系，并按`child_id`严格过滤；无凭证、坏凭证、儿童角色、他户监护人访问或操作均返回403，不泄露他户工单存在性；接单、备注、解决、关闭均以requestId幂等执行。
+- HTTP路径为`/api/v1/risk-console/tickets`及`/claim`、`/notes`、`/resolve`、`/close`；Fastify schema与Zod双重约束，处置说明必须以“虚构处置：”开头且10—240字；响应顶层和每条通知均固定`synthetic:true`、`networkCallMade:false`，详情另含`notificationBoundary.readOnly:true`。
+- 成人端`RiskConsole`在监护主页提供工作台入口，使用独立样式覆盖加载、空态、错误、列表、详情、表单、焦点态、375px/768px布局和44px触控；工作台只读取通知/回执状态，不提供重发、真实拨号、短信、邮件、微信或推送动作。
+- 验证：契约82/82、API离线119/119、MySQL集成22文件88/88（含工作台service/routes 7项与append-only触发器回归）、三工作区typecheck、API和Web生产构建通过。该切片不接入真实渠道或真实个人信息，也不代表阶段6退出门槛达成。
+
 阶段5E全局生成控制与内部固定风险预览：
 
 - 007迁移新增单例`generation_controls`和追加式`generation_control_changes`；全局初始状态固定为`stopped`，变更记录由数据库触发器禁止更新和删除；已有变更历史时007拒绝向下回滚，避免静默丢失控制证据；

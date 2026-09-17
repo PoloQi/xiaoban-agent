@@ -28,6 +28,8 @@ import { registerChildTrustedAdultRoutes } from "./trusted/child-trusted-adult-r
 import type { ChildTrustedAdultService } from "./trusted/child-trusted-adult-service.js";
 import { registerGuardianDashboardRoutes } from "./guardian/guardian-dashboard-routes.js";
 import type { GuardianDashboardService } from "./guardian/guardian-dashboard-service.js";
+import { registerRiskConsoleRoutes } from "./tickets/risk-console-routes.js";
+import type { RiskConsoleService } from "./tickets/risk-console-service.js";
 
 interface AppDependencies {
   childChatService?: ChildChatService;
@@ -41,6 +43,7 @@ interface AppDependencies {
   enrollmentService?: EnrollmentService;
   guardianDashboardService?: GuardianDashboardService;
   localTestAccountService?: LocalTestAccountSessionIssuer;
+  riskConsoleService?: RiskConsoleService;
   probeDatabase?: () => Promise<void>;
 }
 
@@ -341,6 +344,11 @@ export function buildApp(dependencies: AppDependencies = {}) {
 
   if (dependencies.guardianDashboardService !== undefined) {
     registerGuardianDashboardRoutes(app, dependencies.guardianDashboardService);
+  }
+
+  // 阶段6 风险工作台（Agent A，2026-09-17 追加区块）：仅合成工单、只读通知，不触发发送。
+  if (dependencies.riskConsoleService !== undefined) {
+    registerRiskConsoleRoutes(app, dependencies.riskConsoleService);
   }
 
   return app;

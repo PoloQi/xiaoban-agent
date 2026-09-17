@@ -11,6 +11,7 @@ import { ChildOnboardingService } from "./onboarding/child-onboarding-service.js
 import { ChildMoodService } from "./mood/child-mood-service.js";
 import { ChildTrustedAdultService } from "./trusted/child-trusted-adult-service.js";
 import { GuardianDashboardService } from "./guardian/guardian-dashboard-service.js";
+import { RiskConsoleService } from "./tickets/risk-console-service.js";
 import { LOCAL_TEST_ACCOUNT } from "./identity/local-test-account.js";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
@@ -39,6 +40,7 @@ try {
         ? { syntheticPreviewGuardianId: LOCAL_TEST_ACCOUNT.guardianId }
         : {}),
     }),
+    riskConsoleService: new RiskConsoleService(database),
     probeDatabase: () => assertDatabaseBaseline(database),
     ...(localDevAllowed
       ? { localTestAccountService: new LocalTestAccountService(database) }
