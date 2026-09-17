@@ -51,6 +51,20 @@ function assigneeLabel(state: RiskConsoleTicketListItem["assigneeState"]): strin
   }
 }
 
+function categoryLabel(category: string): string {
+  switch (category) {
+    case "bullying": return "疑似欺凌";
+    case "abuse_exploitation": return "疑似侵害或利用";
+    case "fraud_privacy": return "诈骗或隐私风险";
+    case "dangerous_imitation": return "危险模仿";
+    case "self_harm": return "自我伤害风险";
+    case "harm_to_others": return "伤害他人风险";
+    case "active_danger": return "正在发生的危险";
+    case "persistent_distress": return "持续难过";
+    default: return "一般风险";
+  }
+}
+
 function NotificationState({ detail }: { detail: RiskConsoleTicketDetail }) {
   return (
     <section className="rc-notifications" aria-label="通知与回执状态（只读）">
@@ -60,7 +74,7 @@ function NotificationState({ detail }: { detail: RiskConsoleTicketDetail }) {
         {detail.notifications.map((item) => (
           <li key={item.channel}>
             <span className="rc-channel">{item.channel === "in_app" ? "站内提醒" : "站外备用通道"}</span>
-            <span className="rc-nstatus">{item.status}</span>
+            <span className="rc-nstatus">{statusLabel(item.status)}</span>
             <span className="rc-attempts">尝试 {item.attempts} 次</span>
             <em>模拟 · 无网络调用</em>
           </li>
@@ -121,7 +135,7 @@ function TicketDetail({
       <header className="rc-detail-head">
         <p>RISK TICKET · SYNTHETIC</p>
         <div><span className={`rc-level rc-level-${detail.level.toLowerCase()}`}>{levelLabel(detail.level)}</span><span className="rc-status">{statusLabel(detail.status)}</span></div>
-        <h2>{detail.primaryCategory === "bullying" ? "疑似欺凌情境" : detail.primaryCategory === "active_danger" ? "正在发生的危险" : "风险情境"}</h2>
+        <h2>{categoryLabel(detail.primaryCategory)}</h2>
         <em>{assigneeLabel(detail.assigneeState)} · 工单 {detail.caseReference}</em>
         <p className="rc-summary">仅展示风险等级、类别与必要处置信息；普通完整聊天、原始提示与供应商内容均不可见。</p>
       </header>
@@ -226,7 +240,7 @@ function TicketList({ token, onOpen }: { token: string; onOpen: (id: string) => 
           <li key={ticket.id}>
             <button type="button" onClick={() => onOpen(ticket.id)}>
               <span className={`rc-level rc-level-${ticket.level.toLowerCase()}`}>{levelLabel(ticket.level)}</span>
-              <span className="rc-ticket-main"><strong>{statusLabel(ticket.status)}</strong><em>{ticket.primaryCategory}</em></span>
+              <span className="rc-ticket-main"><strong>{statusLabel(ticket.status)}</strong><em>{categoryLabel(ticket.primaryCategory)}</em></span>
               <span className="rc-assignee">{assigneeLabel(ticket.assigneeState)}</span>
             </button>
           </li>
@@ -242,18 +256,29 @@ export function RiskConsole({ token, onExit }: RiskConsoleProps) {
 
   const goList = () => { setTicketId(null); setView("list"); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
+  if (view === "dashboard") {
+    return (
+      <div className="rc-root rc-root-dashboard">
+        <GuardianDashboard token={token} onExit={onExit} />
+        <button className="rc-dashboard-entry" type="button" onClick={goList}>
+          <span>打开风险工单工作台</span>
+          <small>合成工单 · 无真实通知</small>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className={view === "dashboard" ? "rc-root rc-root-dashboard" : "rc-root"}>
+    <div className="rc-root">
       <header className="rc-topbar">
-        <div className="rc-brand"><span>小伴</span><div><strong>监护端</strong><small>GUARDIAN CONSOLE</small></div></div>
-        <div className="rc-switch" role="tablist" aria-label="监护端区域切换">
-          <button type="button" role="tab" aria-selected={view === "dashboard"} className={view === "dashboard" ? "is-current" : ""} onClick={() => setView("dashboard")}>监护主页</button>
-          <button type="button" role="tab" aria-selected={view !== "dashboard"} className={view !== "dashboard" ? "is-current" : ""} onClick={goList}>风险工单</button>
+        <div className="rc-brand"><span>小伴</span><div><strong>风险工作台</strong><small>RISK CONSOLE</small></div></div>
+        <div className="rc-switch" role="tablist" aria-label="工作台区域切换">
+          <button type="button" role="tab" aria-selected={view === "list"} className={view === "list" ? "is-current" : ""} onClick={goList}>工单列表</button>
+          <button type="button" role="tab" aria-selected={false} onClick={() => setView("dashboard")}>监护主页</button>
         </div>
         <button type="button" className="rc-exit" onClick={onExit}>返回儿童端</button>
       </header>
 
-      {view === "dashboard" && <GuardianDashboard token={token} onExit={onExit} />}
       {view === "list" && <TicketList token={token} onOpen={(id) => { setTicketId(id); setView("detail"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
       {view === "detail" && ticketId !== null && (
         <TicketDetail token={token} ticketId={ticketId} onBack={goList} />

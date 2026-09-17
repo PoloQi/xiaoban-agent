@@ -14,7 +14,7 @@ import {
 import { ApiError, requestJson } from "./api";
 import { ChildOnboarding, type ServiceState } from "./ChildOnboarding";
 import { ChildContent } from "./ChildContent";
-import { GuardianDashboard } from "./GuardianDashboard";
+import { RiskConsole } from "./RiskConsole";
 import { clearChildContentCache } from "./content-cache";
 import { completeChildOnboarding, getChildOnboarding } from "./onboarding";
 import { advanceOnboarding, type OnboardingStep } from "./onboarding-flow";
@@ -282,7 +282,7 @@ export function App() {
   }
 
   if (step === "adult" && guardianToken !== null) {
-    return <GuardianDashboard token={guardianToken} onExit={() => { setGuardianToken(null); setStep("content"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />;
+    return <RiskConsole token={guardianToken} onExit={() => { setGuardianToken(null); setStep("content"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />;
   }
 
   if (step === "adult") {
