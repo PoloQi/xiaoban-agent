@@ -370,6 +370,35 @@ export interface ChildMoodCheckInsTable {
   updated_at: Timestamp;
 }
 
+export interface DataRightsRequestsTable {
+  id: string;
+  request_id: string;
+  request_hash: string;
+  guardian_id: string;
+  child_id: string;
+  synthetic: 1;
+  request_type: "delete" | "export";
+  reason_code: "privacy_request" | "guardian_choice" | "pilot_exit";
+  status: "received" | "queued" | "processing" | "completed";
+  child_status_after: "active" | "deactivated";
+  effective_at: Timestamp | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface DataRightsRequestEventsTable {
+  id: string;
+  data_rights_request_id: string;
+  event_request_id: string;
+  request_id: string;
+  request_hash: string;
+  sequence_no: number;
+  action: "request_received" | "export_queued" | "functional_deletion_completed";
+  actor_guardian_id: string;
+  event_metadata: ColumnType<Record<string, unknown>, string, string>;
+  occurred_at: Timestamp;
+  created_at: Timestamp;
+}
 export interface ChildTrustedAdultsTable {
   id: string;
   child_id: string;
@@ -392,6 +421,8 @@ export interface DatabaseSchema {
   child_mood_checkins: ChildMoodCheckInsTable;
   child_profiles: ChildProfilesTable;
   child_trusted_adults: ChildTrustedAdultsTable;
+  data_rights_request_events: DataRightsRequestEventsTable;
+  data_rights_requests: DataRightsRequestsTable;
   content_commands: ContentCommandsTable;
   content_items: ContentItemsTable;
   content_reviews: ContentReviewsTable;

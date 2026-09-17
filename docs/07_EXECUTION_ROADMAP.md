@@ -189,7 +189,7 @@
 
 ## 8. 阶段6：通知、成人端与风险工作台
 
-状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1完成合成风险工单契约与纯内存状态机，6A.2完成MySQL InnoDB持久化和未发送outbox，6A.3完成`FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4完成无网络本地模拟适配器与`attempted`状态，6A.5完成确定性本地失败、1秒退避门槛、二次失败超时升级演练，6A.6完成无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合，6A.7完成仅合成工单边界内的风险工作台API/UI；真实外部发送/真实回执、通知故障降级、SLA演练和数据权利仍未完成
+状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1合成风险工单契约与纯内存状态机，6A.2 MySQL InnoDB持久化和未发送outbox，6A.3 `FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4无网络本地模拟适配器与`attempted`状态，6A.5确定性本地失败、1秒退避、二次失败超时升级演练，6A.6无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合；6A.7完成通知故障用户侧降级、6A.8完成无网络确定性退避调度演练（复用claim门槛、非常驻worker）、6B.1完成合成数据权利请求；6A.9（原Agent A风险工作台，合并后顺延编号）完成仅合成工单边界内的风险工作台API/UI；真实外部发送/真实回执、SLA桌面演练和阶段6总体验收仍未完成
 
 - 已验证成年人；
 - 站内和一种站外通知；
@@ -228,7 +228,25 @@
    - 验证：6A.6聚焦集成4/4通过，6A.5尝试链回归4/4通过；全量MySQL集成20文件81/81通过；契约78/78、API离线119/119、三工作区typecheck、API生产构建通过；
    - 未完成：真实渠道适配与真实回执、退避调度器、通知故障用户侧降级、SLA桌面演练、风险工作台API/UI、数据权利请求和阶段6总体验收。
 
-7. [x] 阶段6A.7（Agent A风险工作台，2026-09-17）：在仅合成工单、无真实通知边界内完成风险工作台契约、019迁移、服务/HTTP API与成人端UI；
+7. [x] 阶段6A.7（2026-09-17）：新增前端独立通知降级纯函数`notice-status.ts`与`notice-status-banner.tsx`，覆盖通知故障的用户侧降级；
+   - 边界：仅前端纯逻辑与静态展示；不改变通知runner/store/契约枚举，不接外部渠道，不发起网络请求；
+   - 能力：工单/通道为`failed`、`timed_out`、`escalated`或确认窗口内未回执时，儿童端与成人风险详情统一显示“暂时没能送达/还没有收到确认”，引导儿童当面告诉可信任大人、成人稍后查看或当面联系；未回执绝不显示“已送达/已查看/已确认/发送成功”，不透传内部异常；只有工单已确认且双通道均`acknowledged`才显示“本地演练回执已记录”，并固定标注不代表真实渠道送达；
+   - 验证：`pnpm --filter @xiaoban/web test` 6文件14/14、`pnpm --filter @xiaoban/web typecheck`、`pnpm --filter @xiaoban/web build`均通过；
+   - 未完成：真实工单读取接口尚未把failed/timed_out/escalated状态接到成人页面数据源（由后续切片处理），SLA桌面演练、风险工作台、数据权利请求和阶段6总体验收仍未完成。
+
+8. [x] 阶段6A.8（2026-09-17）：新增无网络确定性`RiskBackoffScheduleDrillRunner`，复用6A.3领取门槛演示退避调度判断；
+   - 边界：可重放本地演练，不启动常驻worker、定时器或调度器，不注册API，不新增迁移，不接短信/邮件/微信/推送，不存联系方式；固定`simulated:true`、`networkCallMade:false`、`sent:false`、`delivered:false`；
+   - 能力：组合`RiskOutboxClaimWorker`与`RiskNotificationAttemptRunner`（不复制退避SQL），先占用另一通道租约以保证针对同一条失败行；首次失败记`failed/attempts=1`并释放租约，退避窗口内（failed_at+1000ms前）`claimed:false`，到期重领同一outbox，第二次失败记`timed_out/attempts=2`并把工单推进为`escalated`；无到期行返回`scheduled:false/no_due_row`且不写事件；非法requestId/workerId/leaseDurationMs拒绝；事件与claim仍追加式不可改删；
+   - 验证：聚焦MySQL集成1文件3/3；与6A.3/6A.5聚焦回归3文件12/12；`pnpm --filter @xiaoban/api typecheck`、`pnpm --filter @xiaoban/api build`通过；
+   - 未完成：真实渠道适配、真实回执、退避常驻调度器、SLA桌面演练、风险工作台API/UI、数据权利请求和阶段6总体验收。
+
+9. [x] 阶段6B.1（2026-09-17）：新增无外部网络、仅合成数据的数据权利请求最小闭环（datarights模块+018迁移）；
+   - 边界：仅本地合成数据，不接短信/邮件/微信/推送，不存联系方式，不启动worker，不物理擦除历史，不进入阶段7；
+   - 能力：监护人`POST /api/v1/guardian/data-rights/requests`提交delete/export，校验监护身份与活跃已验证关系、requestId幂等与异载荷409、儿童403；export排队且儿童保持active（不生成导出文件），delete功能性撤回同意/报名、停用儿童与绑定、撤销儿童会话；018两表事件追加式、触发器禁改禁删、`sequence_no`稳定排序；
+   - 验证：018在xiaoban_test直接应用→回滚→重放成功（标准迁移器受并行分支019记录阻断，未复制019）；聚焦MySQL集成4/4（含HTTP 201/403）、全量MySQL集成22文件88/88、契约78/78、API离线119/119、三工作区typecheck、API/Web构建通过；
+   - 未完成：真实导出文件生成与交付、物理删除/保留策略评审、真实渠道与回执、SLA桌面演练、风险工作台合并与阶段6总体验收。
+
+10. [x] 阶段6A.9（风险工作台，2026-09-17）：在仅合成工单、无真实通知边界内完成风险工作台契约、019迁移、服务/HTTP API与成人端UI；
    - 边界：只允许已验证成年监护人访问本户工单；无凭证/儿童/他户监护人统一403；不返回普通完整聊天、供应商原文、秘密、提示词、推理、危险候选或联系方式；不提供重发，不接短信/邮件/微信/推送，不新增真实个人信息；
    - 能力：工单列表/详情、接单、追加“虚构处置：”处置记录、在acknowledged/escalated后解决、resolved后关闭；通知/回执只读且固定`synthetic:true`、`networkCallMade:false`；接单与备注表append-only，触发器拒绝UPDATE/DELETE；
    - 验证：全量MySQL集成22文件88/88、契约82/82、API离线19文件119/119、三工作区typecheck、API/Web生产构建通过；
@@ -275,5 +293,3 @@
 欢迎页与三步引导、儿童端四导航、知识与成长闭环、活动目标时长/计时/完成反馈、prototype 风险回应、成人端四导航/风险详情、可信任大人真实闭环（2026-09-10：只读接口 + 明确「是否可联系」状态 + 禁用联系动作）、活动细分筛选（都看看/想动一动/安静做点事）、风险回应页「告诉可信任的大人」链接，以及 bored 故事线（2026-09-10：无聊关键词触发回复+动态建议快捷回复；「想动一动/安静做点事」按 movement 从可见活动库取 ≤3 条返回；「去看看活动」切到内容 tab 并锁定 movement 子筛选）和 risk 故事线（2026-09-10：风险关键词触发 L2/L3 固定响应 → ChildRiskResponse → 告诉可信任的大人 → ChildTrustedAdults（已验证名单、联系按钮禁用）→ 我已告诉他/她 → ChildRiskSent 收尾页含演示通知预览与未真实发送边界，回首页闭环）和 lonely 故事线（2026-09-10：服务端正则识别想念 → 情绪分流（很想念/有点难过/有点委屈）→ 动作分流（请外婆帮我联系 / 我想先自己写下来 / 先做一分钟呼吸）→ 「请外婆帮我联系」命中 `lonely_connection` 路由 → 跳转到 ChildTrustedAdults（lonely 来源，backLabel=「返回陪我聊」，无 risk 收尾；联系按钮禁用、不真实发送））和资料编辑（2026-09-10：迁移 014 给 `child_profiles` 加 `updated_at` 字段；新增 `PATCH /api/v1/child/profile` + `ChildOnboardingService.update()` 鉴权 + 校验 grade 属 ageBand + 事务更新 child_profiles + alias 变化时更新 child_accounts；「我的」半屏弹层 `ChildProfileEdit` 改昵称/年级/兴趣/伙伴；不重新看边界说明、不创建新账户、不扩张成人端；alias 拒绝纯数字避免误填电话）和成长目标编辑（2026-09-10：迁移 015 给 `child_profiles` 加 `current_goal_id` 字段；新增 `GET /api/v1/child/growth-goals` 列表（5 个候选目标池：screen-free-bedtime-30m / daily-move-20m / daily-read-10-pages / tidy-my-space / three-good-things）+ `PATCH /api/v1/child/growth-goal` 切换；成长计划页右上角加「换一个目标」按钮 + 半屏目标选择器；不创建新账户、不扩张成人端）和语音按钮（2026-09-10：聊天页底部 disabled 麦克风按钮 + 点击提示「语音暂未开放，试着打字告诉我吧」3 秒气泡；不录音不上传不读麦克风权限）和前端视觉全面对齐（2026-09-10：CSS design token 统一到 `:root`：--design-teal #0F766E、--design-teal-deep #0A5C56、--design-warm #D6A447、--design-paper #F5F0E4、--design-surface #FFFDF7、--design-ink #183B3A、--design-radius-card 20px、--design-radius-pill 999px、--design-tap 44px；375/768 双视口各页面 teal + 暖米纸 + 楷体标题 + 手账圆角视觉一致）均已完成。成人端不读取完整聊天、不伪造使用时长，合成提醒未发送、不可确认，risk-sent 通知预览为静态文案不调后端不写库。经用户于2026-09-10确认，暂时跳过无网络完整降级；不进入真实儿童试点、真实通知、长期记忆或风险工作台。
 
 每个合法请求必须得到`model_reply`或`static_fallback`，客户端不得得到原始异常、供应商原文、危险候选、秘密、提示词或推理。
-
-

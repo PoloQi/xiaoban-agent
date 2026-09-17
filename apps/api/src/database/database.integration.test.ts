@@ -17,14 +17,23 @@ afterAll(async () => {
 describe("MySQL integration", () => {
   it("meets the database baseline with the current product tables", async () => {
     await assertDatabaseBaseline(database);
-    const result = await sql<{ businessTableCount: number }>`
-      SELECT COUNT(*) AS businessTableCount
+    const result = await sql<{ tableName: string }>`
+      SELECT table_name AS tableName
       FROM information_schema.tables
       WHERE table_schema = DATABASE()
         AND table_name NOT IN ('kysely_migration', 'kysely_migration_lock')
+      ORDER BY table_name
     `.execute(database);
 
-    expect(Number(result.rows[0]?.businessTableCount)).toBe(28);
+    const tableNames = result.rows.map((row) => row.tableName);
+    // Merged branch migrations (001-019) create 30 business tables: the 018
+    // data-rights branch adds two tables and the 019 risk-console branch
+    // adds one append-only notes table. Assert the merged baseline and the
+    // new tables rather than removing either branch migration objects.
+    expect(tableNames.length).toBe(30);
+    expect(tableNames).toContain("data_rights_requests");
+    expect(tableNames).toContain("data_rights_request_events");
+    expect(tableNames).toContain("risk_ticket_console_notes");
   });
 
   it("reports readiness when the database is available", async () => {
