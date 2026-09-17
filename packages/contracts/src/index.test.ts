@@ -54,6 +54,12 @@ import {
   riskTicketCreateRequestSchema,
   riskTicketEventSchema,
   riskTicketSnapshotSchema,
+  RISK_CONSOLE_SCHEMA_VERSION,
+  riskConsoleActionRequestSchema,
+  riskConsoleNoteRequestSchema,
+  riskConsoleResolveRequestSchema,
+  riskConsoleTicketDetailSchema,
+  riskConsoleTicketListResponseSchema,
   reviewedContentRetrievalRequestSchema,
   reviewedContentRetrievalResultSchema,
   CHILD_TRUSTED_ADULTS_SCHEMA_VERSION,
@@ -2077,5 +2083,101 @@ describe("child trusted adult contracts", () => {
       id: `019c111a-f9e0-7dd8-a24c-6dfd908bb7${String(index).padStart(2, "0")}`,
     }));
     expect(childTrustedAdultsResponseSchema.safeParse({ ...validResponse, adults }).success).toBe(false);
+  });
+});
+
+describe("phase 6 risk console contracts", () => {
+  const validDetail = {
+    id: "019c111a-0000-4000-8000-000000000001",
+    caseReference: "synthetic-risk-console-001",
+    level: "L2" as const,
+    primaryCategory: "bullying" as const,
+    status: "open" as const,
+    assigneeState: "unclaimed" as const,
+    claimedAt: null,
+    createdAt: "2026-09-17T01:00:00.000Z",
+    updatedAt: "2026-09-17T01:00:00.000Z",
+    resolution: null,
+    notifications: [
+      { channel: "in_app" as const, status: "not_sent" as const, attempts: 0, simulated: true as const, networkCallMade: false as const },
+      { channel: "off_site_backup" as const, status: "not_sent" as const, attempts: 0, simulated: true as const, networkCallMade: false as const },
+    ],
+    notes: [],
+    permissions: { canClaim: true, canAddNote: false, canResolve: false, canClose: false },
+    notificationBoundary: { simulated: true as const, networkCallMade: false as const, readOnly: true as const },
+  };
+
+  it("accepts a valid list response with explicit no-network synthetic boundary", () => {
+    expect(riskConsoleTicketListResponseSchema.safeParse({
+      schemaVersion: RISK_CONSOLE_SCHEMA_VERSION,
+      synthetic: true,
+      networkCallMade: false,
+      tickets: [{
+        id: validDetail.id,
+        caseReference: validDetail.caseReference,
+        level: "L2",
+        primaryCategory: "bullying",
+        status: "open",
+        assigneeState: "unclaimed",
+        claimedAt: null,
+        createdAt: validDetail.createdAt,
+        updatedAt: validDetail.updatedAt,
+      }],
+    }).success).toBe(true);
+  });
+
+  it("accepts a valid claimed detail with disposition notes", () => {
+    expect(riskConsoleTicketDetailSchema.safeParse({
+      ...validDetail,
+      assigneeState: "claimed_by_me",
+      claimedAt: "2026-09-17T01:05:00.000Z",
+      notes: [
+        { id: "019c111a-0000-4000-8000-000000000010", kind: "claimed", note: null, createdAt: "2026-09-17T01:05:00.000Z" },
+        { id: "019c111a-0000-4000-8000-000000000011", kind: "disposition_note", note: "虚构处置：已当面和孩子一起核对页面线索。", createdAt: "2026-09-17T01:10:00.000Z" },
+      ],
+      permissions: { canClaim: false, canAddNote: true, canResolve: false, canClose: false },
+    }).success).toBe(true);
+  });
+
+  it("rejects any claim of a real network call, non-synthetic flags, and non-prefixed notes", () => {
+    expect(riskConsoleTicketDetailSchema.safeParse({
+      ...validDetail,
+      notificationBoundary: { simulated: true, networkCallMade: true, readOnly: true },
+    }).success).toBe(false);
+    expect(riskConsoleTicketDetailSchema.safeParse({
+      ...validDetail,
+      notifications: [
+        { ...validDetail.notifications[0], networkCallMade: true },
+        validDetail.notifications[1],
+      ],
+    }).success).toBe(false);
+    expect(riskConsoleNoteRequestSchema.safeParse({
+      requestId: validDetail.id, note: "已电话联系家长处理完毕。",
+    }).success).toBe(false);
+    expect(riskConsoleResolveRequestSchema.safeParse({
+      requestId: validDetail.id, dispositionNote: "虚构处置：短。",
+    }).success).toBe(false);
+  });
+
+  it("rejects unknown fields and ticket rows outside L2/L3", () => {
+    expect(riskConsoleActionRequestSchema.safeParse({
+      requestId: validDetail.id, send: true,
+    }).success).toBe(false);
+    expect(riskConsoleTicketListResponseSchema.safeParse({
+      schemaVersion: RISK_CONSOLE_SCHEMA_VERSION,
+      synthetic: true,
+      networkCallMade: false,
+      tickets: [{
+        id: validDetail.id,
+        caseReference: validDetail.caseReference,
+        level: "L0",
+        primaryCategory: "ordinary",
+        status: "open",
+        assigneeState: "unclaimed",
+        claimedAt: null,
+        createdAt: validDetail.createdAt,
+        updatedAt: validDetail.updatedAt,
+      }],
+    }).success).toBe(false);
   });
 });

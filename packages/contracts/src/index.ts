@@ -2117,3 +2117,93 @@ export type RiskNotificationChannel = z.infer<typeof riskNotificationChannelSche
 export type RiskNotificationPlan = z.infer<typeof riskNotificationPlanSchema>;
 export type RiskTicketStatus = z.infer<typeof riskTicketStatusSchema>;
 export type RiskNotificationStatus = z.infer<typeof riskNotificationStatusSchema>;
+
+// ============================================================================
+// 阶段6 风险工作台（Risk Console）—— 2026-09-17 Agent A 追加区块
+// 仅合成工单、只读通知状态；不触发任何发送，不暴露联系方式/正文/推理。
+// ============================================================================
+
+export const RISK_CONSOLE_SCHEMA_VERSION = "risk-console-2026-09-v1";
+
+export const riskConsoleNoteKindSchema = z.enum(["claimed", "disposition_note"]);
+
+const riskConsoleDispositionNoteSchema = z.string().trim().min(10).max(240)
+  .startsWith("虚构处置：");
+
+export const riskConsoleActionRequestSchema = z.object({
+  requestId: requestIdSchema,
+}).strict();
+
+export const riskConsoleNoteRequestSchema = z.object({
+  requestId: requestIdSchema,
+  note: riskConsoleDispositionNoteSchema,
+}).strict();
+
+export const riskConsoleResolveRequestSchema = z.object({
+  requestId: requestIdSchema,
+  dispositionNote: riskConsoleDispositionNoteSchema,
+}).strict();
+
+export const riskConsoleNotificationSchema = z.object({
+  channel: riskNotificationChannelSchema,
+  status: riskNotificationStatusSchema,
+  attempts: z.number().int().min(0).max(2),
+  simulated: z.literal(true),
+  networkCallMade: z.literal(false),
+}).strict();
+
+export const riskConsoleNoteSchema = z.object({
+  id: requestIdSchema,
+  kind: riskConsoleNoteKindSchema,
+  note: riskConsoleDispositionNoteSchema.nullable(),
+  createdAt: z.iso.datetime(),
+}).strict();
+
+export const riskConsolePermissionsSchema = z.object({
+  canClaim: z.boolean(),
+  canAddNote: z.boolean(),
+  canResolve: z.boolean(),
+  canClose: z.boolean(),
+}).strict();
+
+const riskConsoleTicketShape = {
+  id: requestIdSchema,
+  caseReference: riskTicketCreateRequestSchema.shape.caseReference,
+  level: z.enum(["L2", "L3"]),
+  primaryCategory: riskCategorySchema,
+  status: riskTicketStatusSchema,
+  assigneeState: z.enum(["unclaimed", "claimed_by_me", "claimed_by_other"]),
+  claimedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+} as const;
+
+export const riskConsoleTicketListItemSchema = z.object(riskConsoleTicketShape).strict();
+
+export const riskConsoleTicketDetailSchema = z.object({
+  ...riskConsoleTicketShape,
+  resolution: riskTicketSnapshotSchema.shape.resolution,
+  notifications: z.array(riskConsoleNotificationSchema).length(2),
+  notes: z.array(riskConsoleNoteSchema).max(1_000),
+  permissions: riskConsolePermissionsSchema,
+  notificationBoundary: z.object({
+    simulated: z.literal(true),
+    networkCallMade: z.literal(false),
+    readOnly: z.literal(true),
+  }).strict(),
+}).strict();
+
+export const riskConsoleTicketListResponseSchema = z.object({
+  schemaVersion: z.literal(RISK_CONSOLE_SCHEMA_VERSION),
+  synthetic: z.literal(true),
+  networkCallMade: z.literal(false),
+  tickets: z.array(riskConsoleTicketListItemSchema).max(50),
+}).strict();
+
+export type RiskConsoleActionRequest = z.infer<typeof riskConsoleActionRequestSchema>;
+export type RiskConsoleNoteRequest = z.infer<typeof riskConsoleNoteRequestSchema>;
+export type RiskConsoleResolveRequest = z.infer<typeof riskConsoleResolveRequestSchema>;
+export type RiskConsoleTicketListItem = z.infer<typeof riskConsoleTicketListItemSchema>;
+export type RiskConsoleTicketDetail = z.infer<typeof riskConsoleTicketDetailSchema>;
+export type RiskConsoleTicketListResponse = z.infer<typeof riskConsoleTicketListResponseSchema>;
+export type RiskConsoleNoteKind = z.infer<typeof riskConsoleNoteKindSchema>;
