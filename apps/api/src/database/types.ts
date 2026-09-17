@@ -192,10 +192,23 @@ export interface RiskTicketsTable {
   case_reference: string;
   risk_level: "L2" | "L3";
   primary_category: string;
+  child_id: string | null;
+  claimed_by_guardian_id: string | null;
+  claimed_at: NullableTimestamp;
   status: RiskTicketStatus;
   resolution: string | null;
   created_at: Timestamp;
   updated_at: Timestamp;
+}
+
+export interface RiskTicketConsoleNotesTable {
+  id: string;
+  ticket_id: string;
+  request_id: string;
+  guardian_id: string;
+  kind: "claimed" | "disposition_note";
+  note: string | null;
+  created_at: Timestamp;
 }
 
 export interface RiskTicketNotificationOutboxTable {
@@ -391,6 +404,7 @@ export interface DatabaseSchema {
   generation_controls: GenerationControlsTable;
   growth_attempts: GrowthAttemptsTable;
   pilot_invitations: PilotInvitationsTable;
+  risk_ticket_console_notes: RiskTicketConsoleNotesTable;
   risk_ticket_events: RiskTicketEventsTable;
   risk_ticket_notification_outbox: RiskTicketNotificationOutboxTable;
   risk_ticket_outbox_claims: RiskTicketOutboxClaimsTable;

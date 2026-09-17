@@ -40,3 +40,24 @@
 - 小步提交到本分支；每个切片更新开发日志（完成事实/修改文件/验证结果/待办/风险）。
 - 完成后推送并在 main 上发起合并；合并顺序：Agent B 先合，本分支后合（或由用户指定）。冲突仅限 app.ts/App.tsx/contracts 追加区块，按区块保留双方。
 - SLA 桌面演练不在本分支做（两分支合并后统一进行）。
+
+---
+
+## 执行补充说明（2026-09-17 Agent A）
+
+### 启用 019 迁移（已在任务书预授权范围内）
+
+现有 `risk_tickets`（迁移 016）只有合成工单自身字段，没有儿童归属与责任人字段；既有 `risk_ticket_events` 枚举也没有“接单/追加处置备注”。为落地“他户监护人 403、接单、追加处置记录、解决、关闭”，本分支启用编号 **019**（018 已让给 Agent B，不占用）：
+
+- 仅对 `risk_tickets` **追加可空列**：`child_id`、`claimed_by_guardian_id`、`claimed_at`，不改变既有状态枚举、状态机、outbox、attempt/receipt runner 或 016/017 触发器；
+- 新增独立 append-only 表 `risk_ticket_console_notes` 保存 `claimed` 与 `disposition_note`，并配 UPDATE/DELETE 禁止触发器；处置备注仍强制 `虚构处置：` 前缀；
+- “解决/关闭”继续复用 `RiskTicketStore.applyEvent` 与既有 `risk_ticket_events`，不重写状态机、不新增通知发送动作；
+- 迁移向下回滚只删除本迁移新增的触发器、备注表与追加列。
+
+### 装配层最小追加（保持纯追加、区块隔离）
+
+除已列明的 `app.ts` / `App.tsx` / contracts 外，编译与装配还必须对以下既有文件做**纯追加式**改动，不修改既有行语义：
+
+- `apps/api/src/database/types.ts`：仅追加 019 新列/新表接口；
+- `apps/api/src/server.ts`：仅追加 `RiskConsoleService` 的 import、实例化与 `riskConsoleService` 依赖传入；
+- 不修改 outbox 租约、attempt runner、receipt runner、`LocalSyntheticNotificationAdapter`，也不改通知通道章节。
