@@ -28,6 +28,8 @@ import { registerChildTrustedAdultRoutes } from "./trusted/child-trusted-adult-r
 import type { ChildTrustedAdultService } from "./trusted/child-trusted-adult-service.js";
 import { registerGuardianDashboardRoutes } from "./guardian/guardian-dashboard-routes.js";
 import type { GuardianDashboardService } from "./guardian/guardian-dashboard-service.js";
+import { registerDataRightsRoutes } from "./datarights/data-rights-routes.js";
+import type { DataRightsService } from "./datarights/data-rights-service.js";
 
 interface AppDependencies {
   childChatService?: ChildChatService;
@@ -39,6 +41,7 @@ interface AppDependencies {
   closeDatabase?: () => Promise<void>;
   contentService?: ContentService;
   enrollmentService?: EnrollmentService;
+  dataRightsService?: DataRightsService;
   guardianDashboardService?: GuardianDashboardService;
   localTestAccountService?: LocalTestAccountSessionIssuer;
   probeDatabase?: () => Promise<void>;
@@ -341,6 +344,10 @@ export function buildApp(dependencies: AppDependencies = {}) {
 
   if (dependencies.guardianDashboardService !== undefined) {
     registerGuardianDashboardRoutes(app, dependencies.guardianDashboardService);
+  }
+
+  if (dependencies.dataRightsService !== undefined) {
+    registerDataRightsRoutes(app, dependencies.dataRightsService);
   }
 
   return app;

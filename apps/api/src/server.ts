@@ -11,6 +11,7 @@ import { ChildOnboardingService } from "./onboarding/child-onboarding-service.js
 import { ChildMoodService } from "./mood/child-mood-service.js";
 import { ChildTrustedAdultService } from "./trusted/child-trusted-adult-service.js";
 import { GuardianDashboardService } from "./guardian/guardian-dashboard-service.js";
+import { DataRightsService } from "./datarights/data-rights-service.js";
 import { LOCAL_TEST_ACCOUNT } from "./identity/local-test-account.js";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
@@ -32,6 +33,7 @@ try {
     childMoodService: new ChildMoodService(database),
     childTrustedAdultService: new ChildTrustedAdultService(database),
     closeDatabase: () => database.destroy(),
+    dataRightsService: new DataRightsService(database),
     contentService: new ContentService(database),
     enrollmentService: new EnrollmentService(database),
     guardianDashboardService: new GuardianDashboardService(database, {

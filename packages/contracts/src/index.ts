@@ -2117,3 +2117,44 @@ export type RiskNotificationChannel = z.infer<typeof riskNotificationChannelSche
 export type RiskNotificationPlan = z.infer<typeof riskNotificationPlanSchema>;
 export type RiskTicketStatus = z.infer<typeof riskTicketStatusSchema>;
 export type RiskNotificationStatus = z.infer<typeof riskNotificationStatusSchema>;
+
+// ===== Phase 6B.1 data rights requests (2026-09-17, synthetic only) =====
+export const DATA_RIGHTS_SCHEMA_VERSION = "data-rights-2026-09-v1";
+
+export const dataRightsRequestTypeSchema = z.enum(["delete", "export"]);
+
+export const dataRightsReasonCodeSchema = z.enum([
+  "privacy_request",
+  "guardian_choice",
+  "pilot_exit",
+]);
+
+export const dataRightsRequestStatusSchema = z.enum([
+  "received",
+  "queued",
+  "processing",
+  "completed",
+]);
+
+export const dataRightsRequestSchema = z.object({
+  requestId: requestIdSchema,
+  requestType: dataRightsRequestTypeSchema,
+  reasonCode: dataRightsReasonCodeSchema,
+  confirmed: z.boolean(),
+}).strict();
+
+export const dataRightsResponseSchema = z.object({
+  schemaVersion: z.literal(DATA_RIGHTS_SCHEMA_VERSION),
+  requestId: requestIdSchema,
+  requestType: dataRightsRequestTypeSchema,
+  status: dataRightsRequestStatusSchema,
+  childStatus: z.enum(["active", "deactivated"]),
+  queuedForManualProcessing: z.boolean(),
+  effectiveAt: z.iso.datetime().nullable(),
+}).strict();
+
+export type DataRightsRequestType = z.infer<typeof dataRightsRequestTypeSchema>;
+export type DataRightsReasonCode = z.infer<typeof dataRightsReasonCodeSchema>;
+export type DataRightsRequestStatus = z.infer<typeof dataRightsRequestStatusSchema>;
+export type DataRightsRequest = z.infer<typeof dataRightsRequestSchema>;
+export type DataRightsResponse = z.infer<typeof dataRightsResponseSchema>;

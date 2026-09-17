@@ -409,3 +409,9 @@ API当前使用以下非秘密启动配置：
 - 6A.8新增`RiskBackoffScheduleDrillRunner`（apps/api/src/tickets/risk-backoff-schedule-drill-runner.ts）：这是可重放的确定性演练，不是常驻worker或定时器；它组合`RiskOutboxClaimWorker`与`RiskNotificationAttemptRunner`，不复制claim退避SQL，先占用另一通道租约以保证演练针对同一条失败行，完成“首次failed/attempts=1→退避窗口内claimed:false→failed_at+1000ms到期重领同一outbox→第二次timed_out/attempts=2→工单escalated”。
 - 两个切片结果均固定`simulated:true`、`networkCallMade:false`、`sent:false`、`delivered:false`；不接短信/邮件/微信/推送，不存联系方式，不代表真实送达/查看/确认或值守介入。
 
+阶段6B.1数据权利请求（2026-09-17，无网络、仅合成数据）：
+
+- 新增模块`apps/api/src/datarights/`：`DataRightsService.submitRequest()`在单事务内校验监护人Bearer会话、active guardian/enrollment/consent/child与verified且未停用的绑定，再按requestId+请求哈希做幂等（异载荷返回`IDEMPOTENCY_CONFLICT`/409）；路由`POST /api/v1/guardian/data-rights/requests`注册于`app.ts`、装配于`server.ts`，响应符合共享契约`dataRightsResponseSchema`（schemaVersion `data-rights-2026-09-v1`）。
+- 018迁移新增`data_rights_requests`与`data_rights_request_events`：事件表追加式，BEFORE UPDATE/DELETE触发器以`DATA_RIGHTS_EVENT_APPEND_ONLY`拒绝改删，`(request_id)`与`(data_rights_request_id,sequence_no)`、`(data_rights_request_id,action)`唯一约束；同一时间戳的事件以`sequence_no`表达稳定追加顺序。
+- 语义边界：export只写`queued`并保持儿童active，不产生真实导出文件；delete是功能性删除（consent/enrollment置withdrawn、child与link deactivated、撤销未撤销的child会话）并写`data_rights.functional_deletion_completed`与`child_account.deactivated`审计，不物理擦除历史合成数据，保留审计证据。固定`synthetic=1`，不采集联系方式，不调用任何外部渠道。
+
