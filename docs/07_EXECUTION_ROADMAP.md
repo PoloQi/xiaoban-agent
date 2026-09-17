@@ -189,7 +189,7 @@
 
 ## 8. 阶段6：通知、成人端与风险工作台
 
-状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1完成合成风险工单契约与纯内存状态机，6A.2完成MySQL InnoDB持久化和未发送outbox，6A.3完成`FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4完成无网络本地模拟适配器与`attempted`状态，6A.5完成确定性本地失败、1秒退避门槛、二次失败超时升级演练，6A.6完成无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合；真实外部发送/真实回执/工作台仍未开始
+状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1完成合成风险工单契约与纯内存状态机，6A.2完成MySQL InnoDB持久化和未发送outbox，6A.3完成`FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4完成无网络本地模拟适配器与`attempted`状态，6A.5完成确定性本地失败、1秒退避门槛、二次失败超时升级演练，6A.6完成无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合，6A.7完成通知故障用户侧降级，6A.8完成无网络确定性退避调度演练（复用claim门槛、非常驻worker）；真实外部发送/真实回执/工作台仍未开始
 
 - 已验证成年人；
 - 站内和一种站外通知；
@@ -270,4 +270,17 @@
 
 每个合法请求必须得到`model_reply`或`static_fallback`，客户端不得得到原始异常、供应商原文、危险候选、秘密、提示词或推理。
 
+
+
+7. [x] 阶段6A.7（2026-09-17）：新增前端独立通知降级纯函数`notice-status.ts`与`notice-status-banner.tsx`，覆盖通知故障的用户侧降级；
+   - 边界：仅前端纯逻辑与静态展示；不改变通知runner/store/契约枚举，不接外部渠道，不发起网络请求；
+   - 能力：工单/通道为`failed`、`timed_out`、`escalated`或确认窗口内未回执时，儿童端与成人风险详情统一显示“暂时没能送达/还没有收到确认”，引导儿童当面告诉可信任大人、成人稍后查看或当面联系；未回执绝不显示“已送达/已查看/已确认/发送成功”，不透传内部异常；只有工单已确认且双通道均`acknowledged`才显示“本地演练回执已记录”，并固定标注不代表真实渠道送达；
+   - 验证：`pnpm --filter @xiaoban/web test` 6文件14/14、`pnpm --filter @xiaoban/web typecheck`、`pnpm --filter @xiaoban/web build`均通过；
+   - 未完成：真实工单读取接口尚未把failed/timed_out/escalated状态接到成人页面数据源（由后续切片处理），SLA桌面演练、风险工作台、数据权利请求和阶段6总体验收仍未完成。
+
+8. [x] 阶段6A.8（2026-09-17）：新增无网络确定性`RiskBackoffScheduleDrillRunner`，复用6A.3领取门槛演示退避调度判断；
+   - 边界：可重放本地演练，不启动常驻worker、定时器或调度器，不注册API，不新增迁移，不接短信/邮件/微信/推送，不存联系方式；固定`simulated:true`、`networkCallMade:false`、`sent:false`、`delivered:false`；
+   - 能力：组合`RiskOutboxClaimWorker`与`RiskNotificationAttemptRunner`（不复制退避SQL），先占用另一通道租约以保证针对同一条失败行；首次失败记`failed/attempts=1`并释放租约，退避窗口内（failed_at+1000ms前）`claimed:false`，到期重领同一outbox，第二次失败记`timed_out/attempts=2`并把工单推进为`escalated`；无到期行返回`scheduled:false/no_due_row`且不写事件；非法requestId/workerId/leaseDurationMs拒绝；事件与claim仍追加式不可改删；
+   - 验证：聚焦MySQL集成1文件3/3；与6A.3/6A.5聚焦回归3文件12/12；`pnpm --filter @xiaoban/api typecheck`、`pnpm --filter @xiaoban/api build`通过；
+   - 未完成：真实渠道适配、真实回执、退避常驻调度器、SLA桌面演练、风险工作台API/UI、数据权利请求和阶段6总体验收。
 

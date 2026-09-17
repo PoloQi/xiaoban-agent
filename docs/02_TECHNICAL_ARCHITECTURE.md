@@ -403,3 +403,9 @@ API当前使用以下非秘密启动配置：
 - 新增语音、定位、摄像头或设备数据；
 - 改变会话和风险数据保留策略。
 
+阶段6A.7通知故障用户侧降级与6A.8本地退避调度演练（2026-09-17，均无网络）：
+
+- 6A.7新增前端独立纯函数`apps/web/src/notice-status.ts`和`notice-status-banner.tsx`：把工单/通道状态（failed/timed_out/escalated/确认窗口内未回执）映射为delivery_unavailable或acknowledgement_pending，儿童与成人页面统一显示“暂时没能送达/还没有收到确认”，引导儿童当面告诉可信任大人、成人稍后查看或当面联系；只有工单已确认且双通道均acknowledged才显示“本地演练回执已记录”，并固定标注不代表真实渠道送达；未回执绝不显示成功，不透传内部异常；不改变通知runner/store/契约枚举。
+- 6A.8新增`RiskBackoffScheduleDrillRunner`（apps/api/src/tickets/risk-backoff-schedule-drill-runner.ts）：这是可重放的确定性演练，不是常驻worker或定时器；它组合`RiskOutboxClaimWorker`与`RiskNotificationAttemptRunner`，不复制claim退避SQL，先占用另一通道租约以保证演练针对同一条失败行，完成“首次failed/attempts=1→退避窗口内claimed:false→failed_at+1000ms到期重领同一outbox→第二次timed_out/attempts=2→工单escalated”。
+- 两个切片结果均固定`simulated:true`、`networkCallMade:false`、`sent:false`、`delivered:false`；不接短信/邮件/微信/推送，不存联系方式，不代表真实送达/查看/确认或值守介入。
+
