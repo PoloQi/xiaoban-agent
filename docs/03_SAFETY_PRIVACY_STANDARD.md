@@ -187,3 +187,5 @@
 
 2026-09-18阶段6A.12补充：“未回执不显示成功”按三处用户触点端到端锁定——儿童risk-sent固定预览输入只能是`not_sent`（共享常量，不允许页面内联改写）；监护主页alerts的`notificationStatus`由Zod契约锁死为`not_sent`、`acknowledgementStatus`锁死为`unavailable`，契约必须拒绝任何delivered/sent/acknowledged取值，使前端在数据层即收不到成功信号；风险工作台以持久化工单状态驱动，escalated或任一通道failed/timed_out为“暂时没能送达”，单通道确认仍为“还没有收到确认”。任何成功文案仅限双通道acknowledged且工单acknowledged/resolved/closed，并必须同时出现“不代表真实渠道送达”限定；该验收只覆盖合成链路，真实渠道回执接入后必须重新走查。
 
+2026-09-18阶段6A.13补充：“成人无法查看普通完整聊天”经阶段级跨切面复核勾选，证据分三层：①结构层——普通聊天请求-响应式不入库，已迁移xiaoban_test库经`information_schema`断言不存在chat/conversation/transcript/message命名表，生产代码无聊天正文写入路径；②响应层——儿童先发送含独特探针句的聊天后，监护人会话依次请求监护主页、风险工作台工单列表、数据权利导出三个成人可达端点，响应体均不含探针句与任何聊天载体键（conversation/transcript/chatHistory/chatMessages/messages），监护主页契约另固定`ordinaryChatVisible:false`与`hiddenDetail:"完整普通聊天"`，风险详情只暴露类型/等级/状态/通知状态/工单笔记等元数据（工单`minimal_excerpt`必要摘录也不进入工作台响应）；③角色层——监护人token调用`/api/v1/child/chat`为403，五个儿童服务均在服务层强制child角色、成人端反向强制guardian。该结论仅对当前“无聊天持久化”架构成立；未来若引入任何聊天入库或会话留存，本复核必须扩展重跑，且仍须遵守第9节“普通成人账号默认不能查看完整普通聊天、系统管理员无业务理由也不能浏览聊天正文”。
+

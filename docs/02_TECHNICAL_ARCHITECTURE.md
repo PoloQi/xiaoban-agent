@@ -440,3 +440,9 @@ API当前使用以下非秘密启动配置：
 
 - 新增走查测试`apps/web/src/notice-status-walkthrough.test.ts`，对三个用户触点跑“真实响应经Zod契约parse→前端映射→`getNoticeStatusMessage`判定”的完整数据链，而不是只测纯函数：①儿童risk-sent引用`notice-status.ts`新导出的共享常量`syntheticNotSentNoticeInput`（固定`{notificationStatus:"not_sent"}`）；②监护主页alerts经`guardianDashboardResponseSchema`解析，契约把`notificationStatus`锁为`not_sent`、`acknowledgementStatus`锁为`unavailable`，并断言契约拒绝`delivered`取值；③工作台经`riskConsoleTicketDetailSchema`解析open/escalated+timed_out/单通道acknowledged三种工单均不出现成功词，唯一成功路径（工单acknowledged/resolved/closed+双通道acknowledged）仍带“不代表真实”限定。
 - 该切片不引入React DOM渲染测试（既有Web测试均为node环境纯逻辑测试），成功词禁用表与6A.7测试一致；未改API、契约、迁移，真实渠道回执接入后本走查必须扩展重跑。
+
+阶段6A.13“成人无法查看普通完整聊天”阶段级复核（2026-09-18，纯只读+测试，无生产代码/契约/迁移变更）：
+
+- 结构性事实：普通聊天为请求-响应式，`child-chat-service`除鉴权读取`access_sessions`/`child_accounts`外不写任何表；迁移000→019中不存在聊天消息表，风险侧唯一正文字段是`safety_events`/`risk_tickets`的`minimal_excerpt`（≤280字符必要摘录），工作台详情连该字段都不返回（仅level/category/status/notifications/resolution/notes）。
+- 新增跨切面MySQL集成测试`apps/api/src/guardian/adult-chat-privacy.integration.test.ts`（3用例）：①查`information_schema.tables`断言当前库无chat/conversation/transcript/message命名表；②儿童会话先发含独特探针句的聊天，监护人会话随后请求GET `/api/v1/guardian/dashboard`、GET `/api/v1/risk-console/tickets`、POST `/api/v1/guardian/data-rights/requests`（export），三响应体均不含探针句、不含conversation/transcript/chatHistory/chatMessages/messages载体键，并经`guardianDashboardResponseSchema`锁定`settings.ordinaryChatVisible=false`、`privacy.hiddenDetail="完整普通聊天"`，导出仅排队（queued、无export载荷）；③监护人token POST `/api/v1/child/chat`为403（五个儿童服务在服务层强制role==="child"，成人端反向强制guardian）。
+- 测试清理注意：`data_rights_request_events`为追加式表（BEFORE DELETE触发器SIGNAL），不能直接清空，靠删`data_rights_requests`父行的`ON DELETE CASCADE`级联；本门槛证据只覆盖“无聊天持久化”的当前架构，未来一旦引入聊天入库，该走查必须扩展重跑。
