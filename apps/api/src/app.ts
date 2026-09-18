@@ -31,6 +31,9 @@ import type { GuardianDashboardService } from "./guardian/guardian-dashboard-ser
 import { registerRiskConsoleRoutes } from "./tickets/risk-console-routes.js";
 import type { RiskConsoleService } from "./tickets/risk-console-service.js";
 
+import { registerDataRightsRoutes } from "./datarights/data-rights-routes.js";
+import type { DataRightsService } from "./datarights/data-rights-service.js";
+
 interface AppDependencies {
   childChatService?: ChildChatService;
   childContentService?: ChildContentService;
@@ -41,6 +44,7 @@ interface AppDependencies {
   closeDatabase?: () => Promise<void>;
   contentService?: ContentService;
   enrollmentService?: EnrollmentService;
+  dataRightsService?: DataRightsService;
   guardianDashboardService?: GuardianDashboardService;
   localTestAccountService?: LocalTestAccountSessionIssuer;
   riskConsoleService?: RiskConsoleService;
@@ -349,6 +353,10 @@ export function buildApp(dependencies: AppDependencies = {}) {
   // 阶段6 风险工作台（Agent A，2026-09-17 追加区块）：仅合成工单、只读通知，不触发发送。
   if (dependencies.riskConsoleService !== undefined) {
     registerRiskConsoleRoutes(app, dependencies.riskConsoleService);
+  }
+
+  if (dependencies.dataRightsService !== undefined) {
+    registerDataRightsRoutes(app, dependencies.dataRightsService);
   }
 
   return app;
