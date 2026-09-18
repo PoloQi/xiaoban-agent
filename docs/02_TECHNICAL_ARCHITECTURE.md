@@ -430,3 +430,8 @@ API当前使用以下非秘密启动配置：
 - 新增`RiskSlaTabletopDrillRunner`（apps/api/src/tickets/risk-sla-tabletop-drill-runner.ts）：确定性演练，不是常驻worker、定时器或API；每次运行在固定锚点时间`2026-09-18T00:00:00Z`新建一张synthetic工单，通过注入时钟复用`RiskNotificationAttemptRunner`、`RiskLocalReceiptRunner`与`RiskOutboxClaimWorker`，不复制任何退避/状态机SQL。
 - `within_sla`剧本按PRD V0.4 §9建议时限走双通道attempted→delivered→viewed→acknowledged并resolve/close，输出逐检查点`measuredMs/limitMs/pass`：L2为双通道送达≤5分钟、双通道确认≤15分钟；L3为“立即送达”演练代理阈值≤60秒、`escalate_for_immediate_human_review`人工复核≤5分钟。`breach`剧本占用in_app租约后备通道两次失败→timed_out/attempts=2→工单escalated，未达成检查点为`measuredMs:null/pass:false`，`slaMet:false`。
 - 60秒仅为本地演练对“立即送达”的可机器判定代理值，不是生产SLA承诺；结果固定`simulated:true`、`networkCallMade:false`、`sent:false`，不接短信/邮件/微信/推送、不存联系方式，不代表真实值守介入或真实送达。
+
+阶段6A.11通知降级接真实工单数据源（2026-09-18，无API/契约/迁移变更）：
+
+- `notice-status.ts`新增纯函数`noticeInputFromRiskConsoleDetail`：从`riskConsoleTicketDetailSchema`形状的工单详情映射`ticketStatus=detail.status`与按通道顺序的`channelStatuses=detail.notifications[].status`；`RiskConsole.tsx`的`NotificationState`在只读通道列表上方渲染`NoticeStatusBanner`（guardian受众，引入notice-status.css）。
+- 判定全部复用6A.7：工单escalated或任一通道failed/timed_out→delivery_unavailable；open/not_sent、单通道acknowledged等→acknowledgement_pending；仅工单acknowledged/resolved/closed且双通道均acknowledged→local_acknowledged。数据链路是6A.9既有GET `/api/v1/risk-console/tickets/:id`，`risk-console-service.loadDetail`从outbox快照如实映射（含failed/timed_out/attempts），前端不补造回执、无重发动作；儿童端risk-sent固定not_sent预览与监护主页合成alerts不在本切片变更。

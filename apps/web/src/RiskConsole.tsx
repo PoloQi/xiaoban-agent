@@ -4,6 +4,8 @@ import type { RiskConsoleTicketDetail, RiskConsoleTicketListItem } from "@xiaoba
 
 import { ApiError, createSessionToken } from "./api";
 import { GuardianDashboard } from "./GuardianDashboard";
+import { NoticeStatusBanner } from "./notice-status-banner";
+import { noticeInputFromRiskConsoleDetail } from "./notice-status";
 import {
   addRiskTicketNote,
   claimRiskTicket,
@@ -12,6 +14,7 @@ import {
   listRiskTickets,
   resolveRiskTicket,
 } from "./risk-console";
+import "./notice-status.css";
 import "./risk-console.css";
 
 type View = "dashboard" | "list" | "detail";
@@ -70,6 +73,7 @@ function NotificationState({ detail }: { detail: RiskConsoleTicketDetail }) {
     <section className="rc-notifications" aria-label="通知与回执状态（只读）">
       <div className="rc-section-title"><p>NOTIFICATION STATUS</p><h2>通知状态（只读）</h2></div>
       <p className="rc-boundary">本地合成回执：未真实发送、未真实送达（simulated · networkCallMade:false），工作台不会重发任何通知。</p>
+      <NoticeStatusBanner audience="guardian" status={noticeInputFromRiskConsoleDetail(detail)} />
       <ul>
         {detail.notifications.map((item) => (
           <li key={item.channel}>

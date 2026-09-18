@@ -26,6 +26,16 @@ function faceToFaceLine(audience: NoticeStatusAudience): string {
     : "可稍后查看；如有紧急风险，请直接当面联系可信任大人。";
 }
 
+export function noticeInputFromRiskConsoleDetail(detail: {
+  status: RiskTicketStatus;
+  notifications: readonly { status: RiskNotificationStatus }[];
+}): NoticeStatusInput {
+  return {
+    ticketStatus: detail.status,
+    channelStatuses: detail.notifications.map((item) => item.status),
+  };
+}
+
 export function resolveNoticeStatus(input: NoticeStatusInput = {}): NoticeStatusTone {
   const statuses = input.channelStatuses
     ?? (input.notificationStatus === undefined ? [] : [input.notificationStatus]);

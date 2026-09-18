@@ -183,3 +183,5 @@
 
 2026-09-18阶段6A.10补充：`RiskSlaTabletopDrillRunner`只是对合成工单的确定性本地桌面演练，每次新建独立合成工单且使用固定锚点时间，不得被包装成真实SLA承诺或真实值守证据。演练结果固定`simulated:true`、`networkCallMade:false`、`sent:false`；breach剧本必须如实输出未达成检查点（`measuredMs:null/pass:false`）与escalated终态，不得为“演练成功”把超时升级显示为送达或确认；L3“立即送达”的60秒阈值仅为本地演练代理值，PRD V0.4 §9的SLA仍须合作机构结合人员和本地资源书面确认，真实人员值守演练属于阶段7范围。
 
+2026-09-18阶段6A.11补充：风险工作台工单详情接入6A.7通知降级判定后，展示依据必须是`risk-console-service`从持久化outbox如实映射的工单`status`与双通道`notifications[].status/attempts`，不得在前端把failed/timed_out/escalated改写为任何成功文案，也不得补造不存在的回执；open/not_sent、单通道确认等未回执状态一律保持“还没有收到确认”，仅工单acknowledged/resolved/closed且双通道均acknowledged时才允许“本地演练回执已记录”，并必须保留“不代表真实短信、邮件或站外消息送达”说明。该接线不改变合成边界：没有重发动作、没有真实渠道，监护主页合成alerts与儿童端固定not_sent预览同样不得显示成功。
+

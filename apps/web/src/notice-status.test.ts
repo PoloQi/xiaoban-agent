@@ -1,6 +1,11 @@
+import type { RiskConsoleTicketDetail } from "@xiaoban/contracts";
 import { describe, expect, it } from "vitest";
 
-import { getNoticeStatusMessage, resolveNoticeStatus } from "./notice-status";
+import {
+  getNoticeStatusMessage,
+  noticeInputFromRiskConsoleDetail,
+  resolveNoticeStatus,
+} from "./notice-status";
 
 const forbiddenSuccessWords = ["已送达", "已查看", "已确认", "发送成功", "通知成功"];
 
@@ -45,5 +50,67 @@ describe("notice status resilience copy", () => {
     expect(message.safeToShowSuccess).toBe(true);
     expect(message.message).toContain("无网络本地演练");
     expect(message.message).toContain("不代表真实");
+  });
+});
+
+describe("notice status from real risk console ticket detail", () => {
+  function detailWith(
+    ticketStatus: RiskConsoleTicketDetail["status"],
+    channelStatuses: ReadonlyArray<RiskConsoleTicketDetail["notifications"][number]["status"]>,
+  ): Pick<RiskConsoleTicketDetail, "status" | "notifications"> {
+    return {
+      status: ticketStatus,
+      notifications: channelStatuses.map((status, index) => ({
+        channel: index === 0 ? "in_app" : "off_site_backup",
+        status,
+        attempts: status === "not_sent" ? 0 : 1,
+        simulated: true,
+        networkCallMade: false,
+      })),
+    };
+  }
+
+  it("maps persisted per-channel statuses from the workbench detail in channel order", () => {
+    const input = noticeInputFromRiskConsoleDetail(
+      detailWith("waiting_for_acknowledgement", ["delivered", "viewed"]),
+    );
+
+    expect(input.ticketStatus).toBe("waiting_for_acknowledgement");
+    expect(input.channelStatuses).toEqual(["delivered", "viewed"]);
+  });
+
+  it("never shows success for fresh, failed, timed out, escalated, or single-channel tickets read from the workbench", () => {
+    const cases = [
+      detailWith("open", ["not_sent", "not_sent"]),
+      detailWith("escalated", ["not_sent", "timed_out"]),
+      detailWith("waiting_for_acknowledgement", ["failed", "not_sent"]),
+      detailWith("escalated", ["delivered", "failed"]),
+      detailWith("waiting_for_acknowledgement", ["acknowledged", "delivered"]),
+    ] as const;
+
+    for (const detail of cases) {
+      const message = getNoticeStatusMessage("guardian", noticeInputFromRiskConsoleDetail(detail));
+      expect(message.safeToShowSuccess).toBe(false);
+      for (const word of forbiddenSuccessWords) {
+        expect(`${message.title}${message.message}`).not.toContain(word);
+      }
+    }
+
+    expect(resolveNoticeStatus(noticeInputFromRiskConsoleDetail(cases[1]))).toBe("delivery_unavailable");
+    expect(resolveNoticeStatus(noticeInputFromRiskConsoleDetail(cases[2]))).toBe("delivery_unavailable");
+    expect(resolveNoticeStatus(noticeInputFromRiskConsoleDetail(cases[4]))).toBe("acknowledgement_pending");
+  });
+
+  it("shows the local-only receipt only after both channels are acknowledged on an acknowledged or closed ticket", () => {
+    for (const ticketStatus of ["acknowledged", "resolved", "closed"] as const) {
+      const message = getNoticeStatusMessage(
+        "guardian",
+        noticeInputFromRiskConsoleDetail(detailWith(ticketStatus, ["acknowledged", "acknowledged"])),
+      );
+
+      expect(message.tone).toBe("local_acknowledged");
+      expect(message.safeToShowSuccess).toBe(true);
+      expect(message.message).toContain("不代表真实");
+    }
   });
 });
