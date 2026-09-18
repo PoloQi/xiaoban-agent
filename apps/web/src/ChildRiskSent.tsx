@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import "./child-risk-sent.css";
 import { NoticeStatusBanner } from "./notice-status-banner";
+import { syntheticNotSentNoticeInput } from "./notice-status";
 
 interface ChildRiskSentProps {
   onBackHome: () => void;
@@ -44,7 +45,7 @@ export function ChildRiskSent({ onBackHome, onOpenAdultPreview }: ChildRiskSentP
           <p>NOTIFICATION PREVIEW</p>
           <h2 id="risk-sent-preview-title">通知内容预览</h2>
         </div>
-        <NoticeStatusBanner audience="child" status={{ notificationStatus: "not_sent" }} />
+        <NoticeStatusBanner audience="child" status={syntheticNotSentNoticeInput} />
         <article className="risk-sent-preview-card">
           <header>
             <strong>{NOTIFICATION_PREVIEW.title}</strong>

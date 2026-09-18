@@ -185,3 +185,5 @@
 
 2026-09-18阶段6A.11补充：风险工作台工单详情接入6A.7通知降级判定后，展示依据必须是`risk-console-service`从持久化outbox如实映射的工单`status`与双通道`notifications[].status/attempts`，不得在前端把failed/timed_out/escalated改写为任何成功文案，也不得补造不存在的回执；open/not_sent、单通道确认等未回执状态一律保持“还没有收到确认”，仅工单acknowledged/resolved/closed且双通道均acknowledged时才允许“本地演练回执已记录”，并必须保留“不代表真实短信、邮件或站外消息送达”说明。该接线不改变合成边界：没有重发动作、没有真实渠道，监护主页合成alerts与儿童端固定not_sent预览同样不得显示成功。
 
+2026-09-18阶段6A.12补充：“未回执不显示成功”按三处用户触点端到端锁定——儿童risk-sent固定预览输入只能是`not_sent`（共享常量，不允许页面内联改写）；监护主页alerts的`notificationStatus`由Zod契约锁死为`not_sent`、`acknowledgementStatus`锁死为`unavailable`，契约必须拒绝任何delivered/sent/acknowledged取值，使前端在数据层即收不到成功信号；风险工作台以持久化工单状态驱动，escalated或任一通道failed/timed_out为“暂时没能送达”，单通道确认仍为“还没有收到确认”。任何成功文案仅限双通道acknowledged且工单acknowledged/resolved/closed，并必须同时出现“不代表真实渠道送达”限定；该验收只覆盖合成链路，真实渠道回执接入后必须重新走查。
+

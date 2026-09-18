@@ -435,3 +435,8 @@ API当前使用以下非秘密启动配置：
 
 - `notice-status.ts`新增纯函数`noticeInputFromRiskConsoleDetail`：从`riskConsoleTicketDetailSchema`形状的工单详情映射`ticketStatus=detail.status`与按通道顺序的`channelStatuses=detail.notifications[].status`；`RiskConsole.tsx`的`NotificationState`在只读通道列表上方渲染`NoticeStatusBanner`（guardian受众，引入notice-status.css）。
 - 判定全部复用6A.7：工单escalated或任一通道failed/timed_out→delivery_unavailable；open/not_sent、单通道acknowledged等→acknowledgement_pending；仅工单acknowledged/resolved/closed且双通道均acknowledged→local_acknowledged。数据链路是6A.9既有GET `/api/v1/risk-console/tickets/:id`，`risk-console-service.loadDetail`从outbox快照如实映射（含failed/timed_out/attempts），前端不补造回执、无重发动作；儿童端risk-sent固定not_sent预览与监护主页合成alerts不在本切片变更。
+
+阶段6A.12“未回执不显示成功”三处端到端走查（2026-09-18，纯前端+测试）：
+
+- 新增走查测试`apps/web/src/notice-status-walkthrough.test.ts`，对三个用户触点跑“真实响应经Zod契约parse→前端映射→`getNoticeStatusMessage`判定”的完整数据链，而不是只测纯函数：①儿童risk-sent引用`notice-status.ts`新导出的共享常量`syntheticNotSentNoticeInput`（固定`{notificationStatus:"not_sent"}`）；②监护主页alerts经`guardianDashboardResponseSchema`解析，契约把`notificationStatus`锁为`not_sent`、`acknowledgementStatus`锁为`unavailable`，并断言契约拒绝`delivered`取值；③工作台经`riskConsoleTicketDetailSchema`解析open/escalated+timed_out/单通道acknowledged三种工单均不出现成功词，唯一成功路径（工单acknowledged/resolved/closed+双通道acknowledged）仍带“不代表真实”限定。
+- 该切片不引入React DOM渲染测试（既有Web测试均为node环境纯逻辑测试），成功词禁用表与6A.7测试一致；未改API、契约、迁移，真实渠道回执接入后本走查必须扩展重跑。

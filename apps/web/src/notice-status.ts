@@ -26,6 +26,12 @@ function faceToFaceLine(audience: NoticeStatusAudience): string {
     : "可稍后查看；如有紧急风险，请直接当面联系可信任大人。";
 }
 
+/**
+ * 儿童端 risk-sent 预览与监护端未接入真实通知前的固定输入：
+ * 契约层 notificationStatus 只允许 not_sent，UI 必须始终保持“还没有收到确认”。
+ */
+export const syntheticNotSentNoticeInput = { notificationStatus: "not_sent" } as const satisfies NoticeStatusInput;
+
 export function noticeInputFromRiskConsoleDetail(detail: {
   status: RiskTicketStatus;
   notifications: readonly { status: RiskNotificationStatus }[];
