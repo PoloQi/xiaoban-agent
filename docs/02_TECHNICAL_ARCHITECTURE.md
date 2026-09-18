@@ -424,3 +424,9 @@ API当前使用以下非秘密启动配置：
 - 018迁移新增`data_rights_requests`与`data_rights_request_events`：事件表追加式，BEFORE UPDATE/DELETE触发器以`DATA_RIGHTS_EVENT_APPEND_ONLY`拒绝改删，`(request_id)`与`(data_rights_request_id,sequence_no)`、`(data_rights_request_id,action)`唯一约束；同一时间戳的事件以`sequence_no`表达稳定追加顺序。
 - 语义边界：export只写`queued`并保持儿童active，不产生真实导出文件；delete是功能性删除（consent/enrollment置withdrawn、child与link deactivated、撤销未撤销的child会话）并写`data_rights.functional_deletion_completed`与`child_account.deactivated`审计，不物理擦除历史合成数据，保留审计证据。固定`synthetic=1`，不采集联系方式，不调用任何外部渠道。
 
+
+阶段6A.10风险SLA桌面演练（2026-09-18，无网络、仅合成数据）：
+
+- 新增`RiskSlaTabletopDrillRunner`（apps/api/src/tickets/risk-sla-tabletop-drill-runner.ts）：确定性演练，不是常驻worker、定时器或API；每次运行在固定锚点时间`2026-09-18T00:00:00Z`新建一张synthetic工单，通过注入时钟复用`RiskNotificationAttemptRunner`、`RiskLocalReceiptRunner`与`RiskOutboxClaimWorker`，不复制任何退避/状态机SQL。
+- `within_sla`剧本按PRD V0.4 §9建议时限走双通道attempted→delivered→viewed→acknowledged并resolve/close，输出逐检查点`measuredMs/limitMs/pass`：L2为双通道送达≤5分钟、双通道确认≤15分钟；L3为“立即送达”演练代理阈值≤60秒、`escalate_for_immediate_human_review`人工复核≤5分钟。`breach`剧本占用in_app租约后备通道两次失败→timed_out/attempts=2→工单escalated，未达成检查点为`measuredMs:null/pass:false`，`slaMet:false`。
+- 60秒仅为本地演练对“立即送达”的可机器判定代理值，不是生产SLA承诺；结果固定`simulated:true`、`networkCallMade:false`、`sent:false`，不接短信/邮件/微信/推送、不存联系方式，不代表真实值守介入或真实送达。

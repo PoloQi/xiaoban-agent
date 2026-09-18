@@ -189,7 +189,7 @@
 
 ## 8. 阶段6：通知、成人端与风险工作台
 
-状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1合成风险工单契约与纯内存状态机，6A.2 MySQL InnoDB持久化和未发送outbox，6A.3 `FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4无网络本地模拟适配器与`attempted`状态，6A.5确定性本地失败、1秒退避、二次失败超时升级演练，6A.6无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合；6A.7完成通知故障用户侧降级、6A.8完成无网络确定性退避调度演练（复用claim门槛、非常驻worker）、6B.1完成合成数据权利请求；6A.9（原Agent A风险工作台，合并后顺延编号）完成仅合成工单边界内的风险工作台API/UI；真实外部发送/真实回执、SLA桌面演练和阶段6总体验收仍未完成
+状态：当前活动阶段（2026-09-16转入）；成人端只读 UI 与聚合切片已完成；6A.1合成风险工单契约与纯内存状态机，6A.2 MySQL InnoDB持久化和未发送outbox，6A.3 `FOR UPDATE SKIP LOCKED`租约领取安全演练，6A.4无网络本地模拟适配器与`attempted`状态，6A.5确定性本地失败、1秒退避、二次失败超时升级演练，6A.6无网络本地模拟成功回执链（delivered→viewed→acknowledged）与双通道确认聚合；6A.7完成通知故障用户侧降级、6A.8完成无网络确定性退避调度演练（复用claim门槛、非常驻worker）、6B.1完成合成数据权利请求；6A.9（原Agent A风险工作台，合并后顺延编号）完成仅合成工单边界内的风险工作台API/UI；2026-09-18集成分支已合入main（origin/main df60cb6），经用户授权重建干净xiaoban_test后标准迁移器000→019及019/018回滚重放通过，全量复跑（MySQL集成95/95、契约82/82、API离线119/119、Web 14/14、typecheck、API/Web构建、秘密等价扫描）通过；6A.10完成无网络确定性风险SLA桌面演练（L2/L3按时剧本+L2违约升级剧本，PRD V0.4 §9建议时限检查点全部可机器判定）；真实外部发送/真实回执和阶段6总体验收仍未完成，退出门槛除SLA桌面演练外均未勾选
 
 - 已验证成年人；
 - 站内和一种站外通知；
@@ -252,12 +252,18 @@
    - 验证：全量MySQL集成22文件88/88、契约82/82、API离线19文件119/119、三工作区typecheck、API/Web生产构建通过；
    - 未完成：真实渠道与真实回执、退避调度器、通知故障用户侧降级、SLA桌面演练、数据权利请求、生产造单写入child_id和阶段6总体验收。
 
+11. [x] 阶段6A.10（风险SLA桌面演练，2026-09-18）：新增无网络确定性`RiskSlaTabletopDrillRunner`，按PRD V0.4 §9建议SLA对合成工单做可机器判定的桌面走查；
+   - 边界：每次运行新建一张仅合成工单（固定锚点时间，不使用真实当前时间），不注册API、不启动worker/定时器，不接短信/邮件/微信/推送，不存联系方式，固定`simulated:true`、`networkCallMade:false`、`sent:false`；不代表真实值守、真实送达或生产SLA承诺；
+   - 能力：within_sla剧本复用attempt/receipt runner按虚拟时钟走双通道attempted→delivered→viewed→acknowledged全链，L2检查点为双通道送达≤5分钟（演练实测90秒）、双通道确认≤15分钟（实测13分钟），L3检查点为“立即送达”演练代理阈值≤60秒（实测31秒）、人工立即复核≤5分钟（`escalate_for_immediate_human_review`实测210秒），随后resolve（“虚构处置：”）→close；breach剧本固定占用in_app租约、备通道两次失败（复用1秒退避门槛）→timed_out/attempts=2→工单escalated，送达/确认检查点measuredMs为null且pass=false、slaMet=false；非法requestId/level/scenario/leaseDurationMs一律拒绝且不建工单；
+   - 验证：聚焦MySQL集成4/4通过；全量MySQL集成25文件99/99通过；契约82/82、API离线19文件119/119、Web 14/14、三工作区typecheck、API/Web构建通过；
+   - 未完成：真实渠道与真实回执、退避常驻调度器、通知降级接真实工单数据源、真实导出文件与物理删除/保留策略评审、生产造单写入child_id、阶段6总体验收。
+
 退出门槛：
 
 - 未回执不显示成功；
 - 通知故障降级通过；
 - 成人无法查看普通完整聊天；
-- 风险SLA桌面演练通过；
+- [x] 风险SLA桌面演练通过（6A.10：本地合成确定性演练三剧本通过；真实人员/合作机构书面SLA与值守演练属阶段7，未完成）；
 - 删除和审计链路通过。
 
 ## 9. 阶段7：内部封闭Alpha
