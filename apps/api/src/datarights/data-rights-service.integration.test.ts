@@ -6,6 +6,7 @@ import type { Transaction } from "kysely";
 
 import {
   dataRightsResponseSchema,
+  errorResponseSchema,
   GUARDIAN_CONSENT_VERSION,
   CHILD_NOTICE_VERSION,
 } from "@xiaoban/contracts";
@@ -14,9 +15,20 @@ import { loadDatabaseConfig } from "../config.js";
 import { createDatabase } from "../database/client.js";
 import type { DatabaseSchema } from "../database/types.js";
 import { buildApp } from "../app.js";
+import { ChildGrowthService } from "../growth/child-growth-service.js";
 import { DataRightsService } from "./data-rights-service.js";
 import { hashSecret } from "../identity/service.js";
 import { PublicAppError } from "../errors.js";
+
+function readJsonMetadata(value: unknown): Record<string, unknown> {
+  return (typeof value === "string" ? JSON.parse(value) : value) as Record<string, unknown>;
+}
+
+// 阶段6「删除和审计链路」允许的审计/事件元数据键白名单：只允许枚举型业务码，
+// 任何联系方式、自由正文或聊天内容都不得进入审计与事件行。
+const FORBIDDEN_METADATA_KEYS = [
+  "phone", "mobile", "email", "wechat", "address", "contact", "text", "message", "conversation",
+];
 
 const config = loadDatabaseConfig(process.env, "test");
 if (config.database !== "xiaoban_test") {
@@ -338,6 +350,96 @@ describe("phase 6B.1 data rights requests", () => {
         reasonCode: "privacy_request",
         confirmed: true,
       })).rejects.toEqual(new PublicAppError("IDEMPOTENCY_CONFLICT", 409));
+    });
+  });
+
+  it("makes functional deletion effective end to end: the child token loses a child endpoint and audits/events stay metadata-only", async () => {
+    await inRollback(async (transaction) => {
+      const seeded = await seedActiveRelationship(transaction);
+      const app = buildApp({
+        dataRightsService: new DataRightsService(transaction),
+        childGrowthService: new ChildGrowthService(transaction),
+      });
+      try {
+        const requestId = randomUUID();
+        const accepted = await app.inject({
+          method: "POST",
+          url: "/api/v1/guardian/data-rights/requests",
+          headers: { authorization: `Bearer ${seeded.guardianToken}` },
+          payload: { requestId, requestType: "delete", reasonCode: "privacy_request", confirmed: true },
+        });
+        expect(accepted.statusCode).toBe(201);
+
+        const blocked = await app.inject({
+          method: "GET",
+          url: "/api/v1/child/growth-plan",
+          headers: { authorization: `Bearer ${seeded.childToken}` },
+        });
+        expect(blocked.statusCode).toBe(403);
+        expect(errorResponseSchema.parse(blocked.json()).error.code).toBe("ACCOUNT_DEACTIVATED");
+
+        const audits = await transaction.selectFrom("audit_entries")
+          .select(["action", "metadata"])
+          .where("request_id", "=", requestId)
+          .orderBy("created_at", "asc")
+          .execute();
+        expect(audits.map((audit) => audit.action).sort()).toEqual([
+          "child_account.deactivated",
+          "data_rights.functional_deletion_completed",
+        ]);
+        for (const audit of audits) {
+          const metadata = readJsonMetadata(audit.metadata);
+          for (const key of FORBIDDEN_METADATA_KEYS) {
+            expect(metadata).not.toHaveProperty(key);
+          }
+        }
+
+        const events = await transaction.selectFrom("data_rights_request_events")
+          .select(["action", "event_metadata"])
+          .where("request_id", "=", requestId)
+          .orderBy("sequence_no", "asc")
+          .execute();
+        expect(events.map((event) => event.action)).toEqual([
+          "request_received",
+          "functional_deletion_completed",
+        ]);
+        for (const event of events) {
+          const metadata = readJsonMetadata(event.event_metadata);
+          expect(Object.keys(metadata).sort()).toEqual(["reasonCode", "requestType"]);
+        }
+      } finally {
+        await app.close();
+      }
+    });
+  });
+
+  it("writes an export_queued audit entry with metadata-only keys and never returns content in the response", async () => {
+    await inRollback(async (transaction) => {
+      const seeded = await seedActiveRelationship(transaction);
+      const service = new DataRightsService(transaction);
+      const requestId = randomUUID();
+
+      const response = await service.submitRequest(seeded.guardianToken, {
+        requestId,
+        requestType: "export",
+        reasonCode: "guardian_choice",
+        confirmed: true,
+      });
+      const parsed = dataRightsResponseSchema.parse(response);
+      expect(parsed).toMatchObject({
+        requestType: "export",
+        status: "queued",
+        queuedForManualProcessing: true,
+      });
+      expect(JSON.stringify(parsed)).not.toMatch(/phone|email|wechat|address|conversation/u);
+
+      const audits = await transaction.selectFrom("audit_entries")
+        .select(["action", "metadata"])
+        .where("request_id", "=", requestId)
+        .execute();
+      expect(audits.map((audit) => audit.action)).toEqual(["data_rights.export_queued"]);
+      const metadata = readJsonMetadata(audits[0]?.metadata);
+      expect(metadata).toEqual({ requestType: "export", reasonCode: "guardian_choice" });
     });
   });
 });
